@@ -121,8 +121,6 @@ func TestMiddlewareWrapper_Success(t *testing.T) {
 	assert.NotNil(t, wrapper)
 	assert.Equal(t, MiddlewareID, wrapper.ID)
 	assert.NotNil(t, wrapper.Middleware)
-	assert.Equal(t, 1, len(wrapper.Inputs))
-	assert.IsType(t, MockValidatedInput{}, wrapper.Inputs[0])
 }
 
 // TestMiddleware_Success tests that the middleware handles successful

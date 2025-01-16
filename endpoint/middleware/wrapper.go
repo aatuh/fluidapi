@@ -6,5 +6,4 @@ import "github.com/pakkasys/fluidapi/core/api"
 type MiddlewareWrapper struct {
 	ID         string
 	Middleware api.Middleware
-	Inputs     []any
 }

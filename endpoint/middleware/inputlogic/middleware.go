@@ -108,7 +108,6 @@ func MiddlewareWrapper[Input ValidatedInput, Output any](
 			opts.OutputHandler,
 			opts.LoggerFn,
 		),
-		Inputs: []any{*inputFactory()},
 	}
 }
 
