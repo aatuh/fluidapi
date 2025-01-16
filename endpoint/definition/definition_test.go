@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/pakkasys/fluidapi/core/api"
 	"github.com/pakkasys/fluidapi/endpoint/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,11 +43,11 @@ func TestEndpointDefinitionsToAPIEndpoints_NoMiddlewares(t *testing.T) {
 func TestEndpointDefinitionsToAPIEndpoints_WithMiddlewares(t *testing.T) {
 	mockMiddleware := MockMiddleware{}
 
-	middleware1 := api.MiddlewareWrapper{
+	middleware1 := middleware.MiddlewareWrapper{
 		ID:         "auth",
 		Middleware: mockMiddleware.Middleware,
 	}
-	middleware2 := api.MiddlewareWrapper{
+	middleware2 := middleware.MiddlewareWrapper{
 		ID:         "logging",
 		Middleware: mockMiddleware.Middleware,
 	}
@@ -86,7 +85,7 @@ func TestEndpointDefinitionsToAPIEndpoints_WithMiddlewares(t *testing.T) {
 func TestEndpointDefinitionsToAPIEndpoints_MultipleDefinitions(t *testing.T) {
 	mockMiddleware := MockMiddleware{}
 
-	middleware1 := api.MiddlewareWrapper{
+	middleware1 := middleware.MiddlewareWrapper{
 		ID:         "auth",
 		Middleware: mockMiddleware.Middleware,
 	}

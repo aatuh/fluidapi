@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -412,7 +412,7 @@ func TestHandleError_ExpectedError(t *testing.T) {
 	r := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
 
-	expectedError := &api.Error[any]{ID: "EXPECTED_ERROR"}
+	expectedError := apierror.New[any]("EXPECTED_ERROR")
 	expectedStatusCode := http.StatusBadRequest
 
 	expectedErrors := []ExpectedError{

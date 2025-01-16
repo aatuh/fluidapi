@@ -3,7 +3,7 @@ package selector
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 	"github.com/pakkasys/fluidapi/endpoint/predicate"
@@ -127,9 +127,9 @@ func TestToDBSelectors_InvalidPredicate(t *testing.T) {
 
 	assert.Error(t, err, "Expected error for invalid predicate")
 	assert.Nil(t, dbSelectors, "Expected no database selectors when predicate is not allowed")
-	predicateErr, ok := err.(*api.Error[PredicateNotAllowedErrorData])
+	predicateErr, ok := err.(*apierror.Error[PredicateNotAllowedErrorData])
 	assert.True(t, ok, "Expected error to be PREDICATE_NOT_ALLOWED")
-	assert.Equal(t, predicate.EQUAL, predicateErr.Data.Predicate, "Expected error predicate to match the disallowed predicate")
+	assert.Equal(t, predicate.EQUAL, predicateErr.Data().(PredicateNotAllowedErrorData).Predicate, "Expected error predicate to match the disallowed predicate")
 }
 
 // TestToDBSelectors_InvalidField tests the case when a selector field cannot be
@@ -152,9 +152,9 @@ func TestToDBSelectors_InvalidField(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for an unknown field")
 	assert.Nil(t, dbSelectors, "Expected no database selectors for an unknown field")
-	fieldErr, ok := err.(*api.Error[InvalidDatabaseSelectorTranslationErrorData])
+	fieldErr, ok := err.(*apierror.Error[InvalidDatabaseSelectorTranslationErrorData])
 	assert.True(t, ok, "Expected error to be INVALID_DATABASE_SELECTOR_TRANSLATION")
-	assert.Equal(t, "unknown_field", fieldErr.Data.Field, "Expected error field to match the unknown field")
+	assert.Equal(t, "unknown_field", fieldErr.Data().(InvalidDatabaseSelectorTranslationErrorData).Field, "Expected error field to match the unknown field")
 }
 
 // TestToDBSelectors_InvalidDBPredicate tests the case when a predicate cannot
@@ -177,9 +177,9 @@ func TestToDBSelectors_InvalidDBPredicate(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for an invalid DB predicate")
 	assert.Nil(t, dbSelectors, "Expected no database selectors for an invalid DB predicate")
-	dbPredicateErr, ok := err.(*api.Error[InvalidPredicateErrorData])
+	dbPredicateErr, ok := err.(*apierror.Error[InvalidPredicateErrorData])
 	assert.True(t, ok, "Expected error to be INVALID_PREDICATE")
-	assert.Equal(t, predicate.Predicate("NONE"), dbPredicateErr.Data.Predicate, "Expected error predicate to match the invalid predicate")
+	assert.Equal(t, predicate.Predicate("NONE"), dbPredicateErr.Data().(InvalidPredicateErrorData).Predicate, "Expected error predicate to match the invalid predicate")
 }
 
 // TestToDBSelectors_EmptySelectors tests the case when the input selectors list

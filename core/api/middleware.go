@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+// Middleware is a function that wraps an http.Handler with additional
+// functionality.
 type Middleware func(http.Handler) http.Handler
 
 // ApplyMiddlewares applies a chain of middlewares to an http.Handler.
@@ -14,11 +16,4 @@ func ApplyMiddlewares(h http.Handler, middlewares ...Middleware) http.Handler {
 		h = middlewares[i](h)
 	}
 	return h
-}
-
-// MiddlewareWrapper wraps a middleware function with additional metadata.
-type MiddlewareWrapper struct {
-	ID         string
-	Middleware Middleware
-	Inputs     []any
 }

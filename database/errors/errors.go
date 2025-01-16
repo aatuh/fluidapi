@@ -1,10 +1,10 @@
 package errors
 
 import (
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 )
 
 var (
-	DuplicateEntryError    = api.NewError[error]("DUPLICATE_ENTRY")
-	ForeignConstraintError = api.NewError[error]("FOREIGN_CONSTRAINT_ERROR")
+	DuplicateEntryError    = apierror.New[error]("DUPLICATE_ENTRY")
+	ForeignConstraintError = apierror.New[error]("FOREIGN_CONSTRAINT_ERROR")
 )

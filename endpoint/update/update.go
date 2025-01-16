@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/database/entity"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 )
@@ -10,7 +10,7 @@ type InvalidDatabaseUpdateTranslationErrorData struct {
 	Field string `json:"field"`
 }
 
-var InvalidDatabaseUpdateTranslationError = api.NewError[InvalidDatabaseUpdateTranslationErrorData]("INVALID_DATABASE_UPDATE_TRANSLATION")
+var InvalidDatabaseUpdateTranslationError = apierror.New[InvalidDatabaseUpdateTranslationErrorData]("INVALID_DATABASE_UPDATE_TRANSLATION")
 
 // Update represents a data update with a field and a value.
 type Update struct {

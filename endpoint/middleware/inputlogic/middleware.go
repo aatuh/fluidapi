@@ -6,6 +6,8 @@ import (
 	"slices"
 
 	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
+	"github.com/pakkasys/fluidapi/endpoint/middleware"
 )
 
 // MiddlewareID is a constant used to identify the middleware within the system.
@@ -22,12 +24,12 @@ type ValidationErrorData struct {
 	Errors []FieldError `json:"errors"`
 }
 
-var ValidationError = api.NewError[ValidationErrorData]("VALIDATION_ERROR")
+var ValidationError = apierror.New[ValidationErrorData]("VALIDATION_ERROR")
 
 // Internal server expected errors for validation failures.
 var internalExpectedErrors []ExpectedError = []ExpectedError{
 	{
-		ID:         ValidationError.GetID(),
+		ID:         ValidationError.ID(),
 		Status:     http.StatusBadRequest,
 		PublicData: true,
 	},
@@ -95,8 +97,8 @@ func MiddlewareWrapper[Input ValidatedInput, Output any](
 	inputFactory func() *Input,
 	expectedErrors []ExpectedError,
 	opts Options[Input],
-) *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+) *middleware.MiddlewareWrapper {
+	return &middleware.MiddlewareWrapper{
 		ID: MiddlewareID,
 		Middleware: Middleware(
 			callback,

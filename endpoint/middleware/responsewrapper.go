@@ -16,8 +16,8 @@ var (
 
 // ResponseWrapperMiddlewareWrapper creates a new MiddlewareWrapper for the
 // Response Wrapper middleware.
-func ResponseWrapperMiddlewareWrapper() *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+func ResponseWrapperMiddlewareWrapper() *MiddlewareWrapper {
+	return &MiddlewareWrapper{
 		ID: ResponseWrapperMiddlewareID,
 		Middleware: ResponseWrapperMiddleware(
 			util.NewRequestWrapper,

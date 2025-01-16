@@ -3,7 +3,7 @@ package order
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 	"github.com/stretchr/testify/assert"
@@ -60,10 +60,10 @@ func TestValidateAndTranslateToDBOrders_InvalidField(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for an invalid field")
 	assert.Nil(t, dbOrders, "Expected no database orders for an invalid field")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "invalid_field", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "invalid_field", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestValidateAndTranslateToDBOrders tests the scenario where
@@ -87,10 +87,10 @@ func TestValidateAndTranslateToDBOrders_InvalidDirection(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for an invalid direction")
 	assert.Nil(t, dbOrders, "Expected no database orders for an invalid direction")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "name", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "name", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestValidateAndTranslateToDBOrders tests the scenario where
@@ -114,10 +114,10 @@ func TestValidateAndTranslateToDBOrders_FieldNotInTranslationMap(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for a field not present in the translation map")
 	assert.Nil(t, dbOrders, "Expected no database orders for a field not present in the translation map")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "name", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "name", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestToDBOrders_ValidOrders tests the scenario where
@@ -161,10 +161,10 @@ func TestToDBOrders_InvalidField(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for an invalid field")
 	assert.Nil(t, dbOrders, "Expected no database orders for an invalid field")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "invalid_field", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "invalid_field", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestValidateAndDeduplicateOrders tests the ValidateAndDeduplicateOrders
@@ -216,10 +216,10 @@ func TestValidateAndDeduplicateOrders_InvalidDirection(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result, "Result should be nil")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "name", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "name", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestValidateAndDeduplicateOrders_InvalidField tests the case where an
@@ -235,10 +235,10 @@ func TestValidateAndDeduplicateOrders_InvalidField(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result, "Result should be nil")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "invalid_field", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "invalid_field", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestValidateAndDeduplicateOrders_EmptyOrders tests the case where an
@@ -280,10 +280,10 @@ func TestValidate_InvalidDirection(t *testing.T) {
 	err := validate(order, allowedFields)
 
 	assert.Error(t, err, "Expected an error for an invalid direction")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "name", apiErr.Data.Field, "Error fields should match")
+	assert.Equal(t, "name", apiErr.Data().(Order).Field, "Error fields should match")
 }
 
 // TestValidate_InvalidField tests the case where an invalid field is provided.
@@ -298,8 +298,8 @@ func TestValidate_InvalidField(t *testing.T) {
 	err := validate(order, allowedFields)
 
 	assert.Error(t, err, "Expected an error for an invalid field")
-	apiErr, ok := err.(*api.Error[InvalidOrderFieldErrorData])
+	apiErr, ok := err.(*apierror.Error[InvalidOrderFieldErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "INVALID_ORDER_FIELD", apiErr.ID, "Error ID should match")
-	assert.Equal(t, "invalid_field", apiErr.Data.Field, "Errror fields should match")
+	assert.Equal(t, "invalid_field", apiErr.Data().(Order).Field, "Errror fields should match")
 }

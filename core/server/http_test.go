@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pakkasys/fluidapi/core/api"
+	"github.com/pakkasys/fluidapi/core/events"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,19 +42,14 @@ func startTestHTTPServer(
 	port int,
 	httpEndpoints []api.Endpoint,
 ) (shutdownFunc func()) {
-	mockLogger := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			fmt.Println(messages...)
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	// Start the HTTP server in a goroutine
 	go func() {
 		err := HTTPServer(DefaultHTTPServer(
 			port,
 			httpEndpoints,
-			mockLogger,
-			mockLogger,
+			mockEmitter,
 		))
 		if err != nil {
 			fmt.Printf("Error starting server: %v\n", err)
@@ -154,11 +150,7 @@ func TestHTTPServer_CallEndpointWithWrongMethod(t *testing.T) {
 
 // Test case for calling a registered endpoint
 func TestHTTPServer_CallRegisteredEndpoint(t *testing.T) {
-	mockLogger := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			fmt.Println(messages...)
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	// Define endpoints
 	httpEndpoints := []api.Endpoint{
@@ -195,7 +187,7 @@ func TestHTTPServer_CallRegisteredEndpoint(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// Setup mux and test handler
-	mux := setupMux(httpEndpoints, mockLogger, mockLogger)
+	mux := setupMux(httpEndpoints, mockEmitter)
 	mux.ServeHTTP(rr, req)
 
 	// Assert the response
@@ -205,11 +197,7 @@ func TestHTTPServer_CallRegisteredEndpoint(t *testing.T) {
 
 // Test case for DefaultHTTPServer function
 func TestDefaultHTTPServer(t *testing.T) {
-	mockLogger := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			fmt.Println(messages...)
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	// Define test parameters
 	port := 8080
@@ -233,7 +221,7 @@ func TestDefaultHTTPServer(t *testing.T) {
 	}
 
 	// Call DefaultHTTPServer to create the server
-	server := DefaultHTTPServer(port, httpEndpoints, mockLogger, mockLogger)
+	server := DefaultHTTPServer(port, httpEndpoints, mockEmitter)
 
 	// Assert that the server is of type *http.Server
 	httpServer, ok := server.(*http.Server)
@@ -342,20 +330,7 @@ func TestStartServer_ServerShutdownError(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 func TestSetupMux(t *testing.T) {
-	// Mock logger functions to capture log messages
-	var infoLogMessages, errorLogMessages []string
-
-	loggerInfoFn := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			infoLogMessages = append(infoLogMessages, fmt.Sprint(messages...))
-		}
-	}
-
-	loggerErrorFn := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			errorLogMessages = append(errorLogMessages, fmt.Sprint(messages...))
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	// Define test middleware and endpoints
 	getMiddleware := func(next http.Handler) http.Handler {
@@ -385,7 +360,7 @@ func TestSetupMux(t *testing.T) {
 	}
 
 	// Setup Mux
-	mux := setupMux(endpoints, loggerInfoFn, loggerErrorFn)
+	mux := setupMux(endpoints, mockEmitter)
 
 	// Case 1: Test registered endpoint with allowed GET method
 	recorder := httptest.NewRecorder()
@@ -406,19 +381,22 @@ func TestSetupMux(t *testing.T) {
 	// Case 3: Test registered endpoint with not allowed method (PUT to /test)
 	recorder = httptest.NewRecorder()
 	request = httptest.NewRequest("PUT", "/test", nil)
+
+	// Listen to event emitter
+	var infoEvents []string = []string{}
+	mockEmitter.RegisterListener(Info, func(event events.Event) {
+		infoEvents = append(infoEvents, event.Message)
+	})
+
 	mux.ServeHTTP(recorder, request)
 
 	assert.Equal(t, http.StatusMethodNotAllowed, recorder.Code)
-	assert.Contains(t, infoLogMessages[0], "Method not allowed")
+	assert.Contains(t, infoEvents[0], "Method not allowed")
 }
 
 // TestCreateEndpointHandler tests the createEndpointHandler function.
 func TestCreateEndpointHandler(t *testing.T) {
-	mockLogger := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			fmt.Println(messages...)
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	// Mock handlers for different HTTP methods
 	getHandler := http.HandlerFunc(
@@ -439,7 +417,7 @@ func TestCreateEndpointHandler(t *testing.T) {
 	}
 
 	// Create an instance of the handler
-	handler := createEndpointHandler(endpoints, mockLogger, mockLogger)
+	handler := createEndpointHandler(endpoints, mockEmitter)
 
 	tests := []struct {
 		name           string
@@ -479,14 +457,10 @@ func TestCreateEndpointHandler(t *testing.T) {
 
 // TestCreateNotFoundHandler tests the createNotFoundHandler function.
 func TestCreateNotFoundHandler(t *testing.T) {
-	mockLogger := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			fmt.Println(messages...)
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	// Create an instance of the not found handler
-	handler := createNotFoundHandler(mockLogger)
+	handler := createNotFoundHandler(mockEmitter)
 
 	// Define the test request
 	req := httptest.NewRequest("GET", "/non-existent", nil)
@@ -532,11 +506,7 @@ func TestMapKeys(t *testing.T) {
 
 // TestMultiplexEndpoints tests the multiplexEndpoints function.
 func TestMultiplexEndpoints(t *testing.T) {
-	loggerErrorFn := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			t.Log("Error:", messages) // Logging for verification
-		}
-	}
+	mockEmitter := events.NewDefaultEventEmitter()
 
 	testMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -556,7 +526,7 @@ func TestMultiplexEndpoints(t *testing.T) {
 		},
 	}
 
-	muxEndpoints := multiplexEndpoints(endpoints, loggerErrorFn)
+	muxEndpoints := multiplexEndpoints(endpoints, mockEmitter)
 
 	// Test the middleware is applied
 	recorder := httptest.NewRecorder()
@@ -569,14 +539,12 @@ func TestMultiplexEndpoints(t *testing.T) {
 
 // TestServerPanicHandler tests the serverPanicHandler function.
 func TestServerPanicHandler(t *testing.T) {
-	var loggedMessages []string
+	mockEmitter := events.NewDefaultEventEmitter()
 
-	// Mock loggerErrorFn to capture log messages
-	loggerErrorFn := func(r *http.Request) func(messages ...any) {
-		return func(messages ...any) {
-			loggedMessages = append(loggedMessages, fmt.Sprint(messages...))
-		}
-	}
+	var errorEvents []string = []string{}
+	mockEmitter.RegisterListener(Error, func(event events.Event) {
+		errorEvents = append(errorEvents, event.Message)
+	})
 
 	// Case 1: Test normal execution without panic
 	normalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -585,7 +553,7 @@ func TestServerPanicHandler(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
-	handler := serverPanicHandler(normalHandler, loggerErrorFn)
+	handler := serverPanicHandler(normalHandler, mockEmitter)
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/", nil)
@@ -593,16 +561,16 @@ func TestServerPanicHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 	assert.Equal(t, "OK", recorder.Body.String())
-	assert.Empty(t, loggedMessages) // No panic, no log should be captured
+	assert.Empty(t, errorEvents) // No panic, no log should be captured
 
 	// Case 2: Test execution with panic
-	loggedMessages = []string{} // Reset log messages
+	errorEvents = []string{} // Reset log messages
 
 	panicHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("test panic")
 	})
 
-	handler = serverPanicHandler(panicHandler, loggerErrorFn)
+	handler = serverPanicHandler(panicHandler, mockEmitter)
 
 	recorder = httptest.NewRecorder()
 	request = httptest.NewRequest("GET", "/", nil)
@@ -610,9 +578,9 @@ func TestServerPanicHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 	assert.Contains(t, recorder.Body.String(), http.StatusText(http.StatusInternalServerError))
-	assert.Len(t, loggedMessages, 1)
-	assert.Contains(t, loggedMessages[0], "Server panic")
-	assert.Contains(t, loggedMessages[0], "test panic")
+	assert.Len(t, errorEvents, 1)
+	assert.Contains(t, errorEvents[0], "Server panic")
+	assert.Contains(t, errorEvents[0], "test panic")
 }
 
 // TestStackTraceSlice tests the stackTraceSlice function.

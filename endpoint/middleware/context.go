@@ -11,8 +11,8 @@ import (
 const ContextMiddlewareID = "context"
 
 // ContextMiddlewareWrapper is the middleware wrapper for the context middleware
-func ContextMiddlewareWrapper() *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+func ContextMiddlewareWrapper() *MiddlewareWrapper {
+	return &MiddlewareWrapper{
 		ID:         ContextMiddlewareID,
 		Middleware: ContextMiddleware(),
 	}

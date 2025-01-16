@@ -4,7 +4,7 @@ package runner
 import (
 	"net/http"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/core/client"
 	"github.com/pakkasys/fluidapi/database/entity"
 	databaseutil "github.com/pakkasys/fluidapi/database/util"
@@ -38,7 +38,7 @@ type StackBuilder interface {
 	// Builds and returns the middleware stack.
 	Build() middleware.Stack
 	// Adds middleware wrappers to the stack.
-	MustAddMiddleware(wrapper ...api.MiddlewareWrapper) StackBuilder
+	MustAddMiddleware(wrapper ...middleware.MiddlewareWrapper) StackBuilder
 }
 
 // SendFunc is a function type used to send requests from a client.
@@ -80,7 +80,7 @@ type EndpointOption[I any, O any, W any] func(*Endpoint[I, O, W])
 // Returns:
 //   - An EndpointOption that applies the specified middleware wrapper.
 func WithMiddlewareWrapper[I ValidatedInput, O any, W any](
-	middlewareWrapper *api.MiddlewareWrapper,
+	middlewareWrapper *middleware.MiddlewareWrapper,
 ) EndpointOption[I, O, W] {
 	return func(endpoint *Endpoint[I, O, W]) {
 		endpoint.Definition.MiddlewareStack = middleware.Stack{
@@ -303,8 +303,8 @@ func DeleteEndpointDefinition[I ParseableInput[ParsedDeleteEndpointInput], O any
 	)
 }
 
-var NeedAtLeastOneUpdateError = api.NewError[any]("NEED_AT_LEAST_ONE_UPDATE")
-var NeedAtLeastOneSelectorError = api.NewError[any]("NEED_AT_LEAST_ONE_SELECTOR")
+var NeedAtLeastOneUpdateError = apierror.New[any]("NEED_AT_LEAST_ONE_UPDATE")
+var NeedAtLeastOneSelectorError = apierror.New[any]("NEED_AT_LEAST_ONE_SELECTOR")
 
 type APIFields map[string]dbfield.DBField
 

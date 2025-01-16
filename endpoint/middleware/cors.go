@@ -32,8 +32,8 @@ func CORSMiddlewareWrapper(
 	allowedOrigins []string,
 	allowedMethods []string,
 	allowedHeaders []string,
-) *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+) *MiddlewareWrapper {
+	return &MiddlewareWrapper{
 		ID: CORSMiddlewareID,
 		Middleware: CORSMiddleware(
 			allowedOrigins,

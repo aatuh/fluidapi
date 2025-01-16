@@ -26,12 +26,12 @@ import (
 // MockStackBuilder is a mock implementation of the StackBuilder interface.
 type MockStackBuilder struct {
 	mock.Mock
-	middlewares []api.MiddlewareWrapper
+	middlewares []middleware.MiddlewareWrapper
 }
 
 // MustAddMiddleware adds the provided middleware wrappers to the stack.
 func (m *MockStackBuilder) MustAddMiddleware(
-	wrappers ...api.MiddlewareWrapper,
+	wrappers ...middleware.MiddlewareWrapper,
 ) StackBuilder {
 	m.Called(wrappers)
 	m.middlewares = append(m.middlewares, wrappers...)
@@ -165,8 +165,8 @@ func MockMiddlewareWrapper[I ValidatedInput, O any](
 	inputFactory func() *I,
 	expectedErrors []inputlogic.ExpectedError,
 	opts inputlogic.Options[I],
-) *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+) *middleware.MiddlewareWrapper {
+	return &middleware.MiddlewareWrapper{
 		ID: inputlogic.MiddlewareID,
 		Middleware: func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +185,7 @@ func MockMiddlewareWrapper[I ValidatedInput, O any](
 
 // TestWithMiddlewareWrapper tests the WithMiddlewareWrapper function.
 func TestWithMiddlewareWrapper(t *testing.T) {
-	mockMiddlewareWrapper := &api.MiddlewareWrapper{
+	mockMiddlewareWrapper := &middleware.MiddlewareWrapper{
 		ID: "mockMiddleware",
 		Middleware: func(next http.Handler) http.Handler {
 			return http.HandlerFunc(

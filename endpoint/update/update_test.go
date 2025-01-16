@@ -3,7 +3,7 @@ package update
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,9 +47,9 @@ func TestToDBUpdates_InvalidField(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for an unknown field")
 	assert.Nil(t, dbUpdates, "Expected no database updates for an unknown field")
-	updateErr, ok := err.(*api.Error[InvalidDatabaseUpdateTranslationErrorData])
+	updateErr, ok := err.(*apierror.Error[InvalidDatabaseUpdateTranslationErrorData])
 	assert.True(t, ok, "Expected error to be INVALID_DATABASE_UPDATE_TRANSLATION")
-	assert.Equal(t, "unknown_field", updateErr.Data.Field, "Expected error field to match the unknown field")
+	assert.Equal(t, "unknown_field", updateErr.Data().(InvalidDatabaseUpdateTranslationErrorData).Field, "Expected error field to match the unknown field")
 }
 
 // TestToDBUpdates_EmptyUpdates tests the case when the input updates list is
@@ -85,7 +85,7 @@ func TestToDBUpdates_MultipleInvalidFields(t *testing.T) {
 
 	assert.Error(t, err, "Expected an error for unknown fields")
 	assert.Nil(t, dbUpdates, "Expected no database updates for unknown fields")
-	updateErr, ok := err.(*api.Error[InvalidDatabaseUpdateTranslationErrorData])
+	updateErr, ok := err.(*apierror.Error[InvalidDatabaseUpdateTranslationErrorData])
 	assert.True(t, ok, "Expected error to be of type InvalidDatabaseUpdateTranslationError")
-	assert.Contains(t, []string{"unknown_field_1", "unknown_field_2"}, updateErr.Data.Field, "Expected error field to match one of the unknown fields")
+	assert.Contains(t, []string{"unknown_field_1", "unknown_field_2"}, updateErr.Data().(InvalidDatabaseUpdateTranslationErrorData).Field, "Expected error field to match one of the unknown fields")
 }

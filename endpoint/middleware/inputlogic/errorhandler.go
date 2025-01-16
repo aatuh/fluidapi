@@ -3,10 +3,10 @@ package inputlogic
 import (
 	"net/http"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 )
 
-var InternalServerError = api.NewError[any]("INTERNAL_SERVER_ERROR")
+var InternalServerError = apierror.New[any]("INTERNAL_SERVER_ERROR")
 
 // ErrorHandler handles errors and maps them to appropriate HTTP responses.
 type ErrorHandler struct{}
@@ -21,13 +21,13 @@ type ExpectedError struct {
 }
 
 // Handle processes an error and returns the corresponding HTTP status code and
-// API error. It checks if the error is an *api.Error[any] and handles it
+// API error. It checks if the error is an *apierror.Error[any] and handles it
 // accordingly.
 func (e ErrorHandler) Handle(
 	handleError error,
 	expectedErrors []ExpectedError,
-) (int, *api.Error[any]) {
-	apiError, ok := handleError.(api.APIError)
+) (int, *apierror.Error[any]) {
+	apiError, ok := handleError.(*apierror.Error[any])
 	if !ok {
 		return http.StatusInternalServerError, InternalServerError
 	}
@@ -35,9 +35,9 @@ func (e ErrorHandler) Handle(
 }
 
 func (e *ErrorHandler) handleAPIError(
-	apiError api.APIError,
+	apiError *apierror.Error[any],
 	expectedErrors []ExpectedError,
-) (int, *api.Error[any]) {
+) (int, *apierror.Error[any]) {
 	expectedError := e.getExpectedError(apiError, expectedErrors)
 	if expectedError == nil {
 		return http.StatusInternalServerError, InternalServerError
@@ -46,11 +46,11 @@ func (e *ErrorHandler) handleAPIError(
 }
 
 func (e *ErrorHandler) getExpectedError(
-	apiError api.APIError,
+	apiError *apierror.Error[any],
 	expectedErrors []ExpectedError,
 ) *ExpectedError {
 	for i := range expectedErrors {
-		if apiError.GetID() == expectedErrors[i].ID {
+		if apiError.ID() == expectedErrors[i].ID {
 			return &expectedErrors[i]
 		}
 	}
@@ -58,8 +58,8 @@ func (e *ErrorHandler) getExpectedError(
 }
 
 func (expectedError *ExpectedError) maskAPIError(
-	apiError api.APIError,
-) (int, *api.Error[any]) {
+	apiError *apierror.Error[any],
+) (int, *apierror.Error[any]) {
 	var useErrorID string
 	if expectedError.MaskedID != nil {
 		useErrorID = *expectedError.MaskedID
@@ -69,10 +69,10 @@ func (expectedError *ExpectedError) maskAPIError(
 
 	var useData any
 	if expectedError.PublicData {
-		useData = apiError.GetData()
+		useData = apiError.Data()
 	} else {
 		useData = nil
 	}
 
-	return expectedError.Status, &api.Error[any]{ID: useErrorID, Data: &useData}
+	return expectedError.Status, apierror.New[any](useErrorID).WithData(useData)
 }

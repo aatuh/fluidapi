@@ -1,12 +1,12 @@
 package page
 
-import "github.com/pakkasys/fluidapi/core/api"
+import apierror "github.com/pakkasys/fluidapi/core/api/error"
 
 type MaxPageLimitExceededErrorData struct {
 	MaxLimit int `json:"max_limit"`
 }
 
-var MaxPageLimitExceededError = api.NewError[MaxPageLimitExceededErrorData]("MAX_PAGE_LIMIT_EXCEEDED")
+var MaxPageLimitExceededError = apierror.New[MaxPageLimitExceededErrorData]("MAX_PAGE_LIMIT_EXCEEDED")
 
 // Page represents a pagination input.
 type Page struct {

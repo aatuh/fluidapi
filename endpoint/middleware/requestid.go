@@ -32,8 +32,8 @@ type RequestMetadata struct {
 //   - requestIDFn: A function that generates a unique request ID.
 func RequestIDMiddlewareWrapper(
 	requestIDFn func() string,
-) *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+) *MiddlewareWrapper {
+	return &MiddlewareWrapper{
 		ID:         RequestIDMiddlewareID,
 		Middleware: RequestIDMiddleware(requestIDFn),
 	}

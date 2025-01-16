@@ -2,7 +2,7 @@ package middleware
 
 import "github.com/pakkasys/fluidapi/core/api"
 
-type Stack []api.MiddlewareWrapper
+type Stack []MiddlewareWrapper
 
 // Middlewares returns the middlewares in the stack.
 //
@@ -27,7 +27,7 @@ func (s Stack) Middlewares() []api.Middleware {
 //
 // Returns:
 //   - True if the middleware was inserted, false otherwise.
-func (s *Stack) InsertAfterID(id string, wrapper api.MiddlewareWrapper) bool {
+func (s *Stack) InsertAfterID(id string, wrapper MiddlewareWrapper) bool {
 	for i, mw := range *s {
 		if mw.ID == id {
 			if i == len(*s)-1 {
@@ -36,7 +36,7 @@ func (s *Stack) InsertAfterID(id string, wrapper api.MiddlewareWrapper) bool {
 				*s = append(
 					(*s)[:i+1],
 					append(
-						[]api.MiddlewareWrapper{wrapper},
+						[]MiddlewareWrapper{wrapper},
 						(*s)[i+1:]...,
 					)...,
 				)

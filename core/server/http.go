@@ -12,15 +12,22 @@ import (
 	"time"
 
 	"github.com/pakkasys/fluidapi/core/api"
+	"github.com/pakkasys/fluidapi/core/events"
 )
 
-type multiplexedEndpoints map[string]map[string]http.Handler
+// Define event types.
+const (
+	Error = "error"
+	Info  = "info"
+)
 
 // IServer represents an HTTP server.
 type IServer interface {
 	ListenAndServe() error              // Start the server
 	Shutdown(ctx context.Context) error // Stop the server
 }
+
+type multiplexedEndpoints map[string]map[string]http.Handler
 
 // HTTPServer sets up an HTTP server with the specified port and endpoints,
 // using optional logging functions for requests and errors. If no custom server
@@ -32,23 +39,19 @@ func HTTPServer(server IServer) error {
 	return startServer(make(chan os.Signal, 1), server)
 }
 
-type LoggerFn func(r *http.Request) func(messages ...any)
-
-// HTTPServer returns the default HTTP server implementation.
+// DefaultHTTPServer returns the default HTTP server implementation.
 //
 //   - port: Port for the HTTP server.
 //   - httpEndpoints: Endpoints to register.
-//   - loggerInfoFn: Function to log informational messages.
-//   - loggerErrorFn: Function to log error messages.
+//   - eventEmitter: Optional event emitter for logging.
 func DefaultHTTPServer(
 	port int,
 	httpEndpoints []api.Endpoint,
-	loggerInfoFn LoggerFn,
-	loggerErrorFn LoggerFn,
+	eventEmitter events.EventEmitter,
 ) IServer {
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: setupMux(httpEndpoints, loggerInfoFn, loggerErrorFn),
+		Handler: setupMux(httpEndpoints, eventEmitter),
 	}
 }
 
@@ -89,11 +92,10 @@ func startServer(stopChan chan os.Signal, server IServer) error {
 
 func setupMux(
 	httpEndpoints []api.Endpoint,
-	loggerInfoFn func(r *http.Request) func(messages ...any),
-	loggerErrorFn func(r *http.Request) func(messages ...any),
+	eventEmitter events.EventEmitter,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
-	endpoints := multiplexEndpoints(httpEndpoints, loggerErrorFn)
+	endpoints := multiplexEndpoints(httpEndpoints, eventEmitter)
 
 	for url := range endpoints {
 		log.Printf("Registering URL: %s %v", url, mapKeys(endpoints[url]))
@@ -102,32 +104,33 @@ func setupMux(
 			iterUrl,
 			createEndpointHandler(
 				endpoints[iterUrl],
-				loggerInfoFn,
-				loggerErrorFn,
+				eventEmitter,
 			),
 		)
 	}
 
-	mux.Handle("/", createNotFoundHandler(loggerInfoFn))
+	mux.Handle("/", createNotFoundHandler(eventEmitter))
 
 	return mux
 }
 
 func createEndpointHandler(
 	endpoints map[string]http.Handler,
-	loggerInfoFn func(r *http.Request) func(messages ...any),
-	loggerErrorFn func(r *http.Request) func(messages ...any),
+	eventEmitter events.EventEmitter,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if handler, ok := endpoints[r.Method]; ok {
 			handler.ServeHTTP(w, r)
 			return
 		}
-		if loggerErrorFn != nil {
-			loggerInfoFn(r)(fmt.Sprintf(
-				"Method not allowed: %s (%v)",
-				r.URL,
-				r.Method),
+		if eventEmitter != nil {
+			eventEmitter.Emit(
+				events.NewEvent(
+					Info,
+					fmt.Sprintf("Method not allowed: %s (%v)",
+						r.URL,
+						r.Method),
+				),
 			)
 		}
 		http.Error(
@@ -139,10 +142,17 @@ func createEndpointHandler(
 }
 
 func createNotFoundHandler(
-	loggerInfoFn func(r *http.Request) func(messages ...any),
+	eventEmitter events.EventEmitter,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		loggerInfoFn(r)(fmt.Sprintf("Not found: %s (%v)", r.URL, r.Method))
+		if eventEmitter != nil {
+			eventEmitter.Emit(
+				events.NewEvent(
+					Info,
+					fmt.Sprintf("Not found: %s (%v)", r.URL, r.Method),
+				),
+			)
+		}
 		http.Error(
 			w,
 			http.StatusText(http.StatusNotFound),
@@ -161,7 +171,7 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 
 func multiplexEndpoints(
 	httpEndpoints []api.Endpoint,
-	loggerErrorFn func(r *http.Request) func(messages ...any),
+	eventEmitter events.EventEmitter,
 ) multiplexedEndpoints {
 	endpoints := multiplexedEndpoints{}
 	for i := range httpEndpoints {
@@ -182,7 +192,7 @@ func multiplexEndpoints(
 				),
 				httpEndpoints[i].Middlewares...,
 			),
-			loggerErrorFn,
+			eventEmitter,
 		)
 	}
 	return endpoints
@@ -190,15 +200,17 @@ func multiplexEndpoints(
 
 func serverPanicHandler(
 	next http.Handler,
-	loggerErrorFn func(r *http.Request) func(messages ...any),
+	eventEmitter events.EventEmitter,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				if loggerErrorFn != nil {
-					loggerErrorFn(r)(
-						"Server panic",
-						fmt.Sprintf("%v, %v", err, stackTraceSlice()),
+				if eventEmitter != nil {
+					eventEmitter.Emit(
+						events.NewEvent(
+							Error,
+							fmt.Sprintf("Server panic: %v, %v", err, stackTraceSlice()),
+						),
 					)
 				}
 				http.Error(

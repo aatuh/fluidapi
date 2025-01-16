@@ -56,8 +56,8 @@ type panicData struct {
 //   - loggerFn: A function that logs panic information for the request.
 func PanicHandlerMiddlewareWrapper(
 	loggerFn func(r *http.Request) func(messages ...any),
-) *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+) *MiddlewareWrapper {
+	return &MiddlewareWrapper{
 		ID:         PanicHandlerMiddlewareID,
 		Middleware: PanicHandlerMiddleware(loggerFn),
 	}

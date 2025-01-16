@@ -28,8 +28,8 @@ type requestLog struct {
 //   - requestLoggerFn: A function that logs messages for the request.
 func RequestLogMiddlewareWrapper(
 	requestLoggerFn func(r *http.Request) func(messages ...any),
-) *api.MiddlewareWrapper {
-	return &api.MiddlewareWrapper{
+) *MiddlewareWrapper {
+	return &MiddlewareWrapper{
 		ID:         RequestLogMiddlewareID,
 		Middleware: RequestLogMiddleware(GetRequestMetadata, requestLoggerFn),
 	}

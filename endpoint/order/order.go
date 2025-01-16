@@ -3,7 +3,7 @@ package order
 import (
 	"slices"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 )
@@ -12,7 +12,7 @@ type InvalidOrderFieldErrorData struct {
 	Field string `json:"field"`
 }
 
-var InvalidOrderFieldError = api.NewError[InvalidOrderFieldErrorData]("INVALID_ORDER_FIELD")
+var InvalidOrderFieldError = apierror.New[InvalidOrderFieldErrorData]("INVALID_ORDER_FIELD")
 
 type OrderDirection string
 

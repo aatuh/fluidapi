@@ -3,7 +3,7 @@ package page
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/core/api"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,10 +32,10 @@ func TestValidate_LimitExceeded(t *testing.T) {
 	err := page.Validate(maxLimit)
 
 	assert.Error(t, err, "Expected an error when limit exceeds maxLimit")
-	apiErr, ok := err.(*api.Error[MaxPageLimitExceededErrorData])
+	apiErr, ok := err.(*apierror.Error[MaxPageLimitExceededErrorData])
 	assert.True(t, ok, "Error should be of type *api.Error")
 	assert.Equal(t, "MAX_PAGE_LIMIT_EXCEEDED", apiErr.ID, "Error ID should")
-	assert.Equal(t, maxLimit, apiErr.Data.MaxLimit, "Max limit should match")
+	assert.Equal(t, maxLimit, apiErr.Data().(MaxPageLimitExceededErrorData).MaxLimit, "Max limit should match")
 }
 
 // Validate_ZeroLimit tests the Validate function for a limit of zero.

@@ -32,11 +32,11 @@ func TestMiddlewares_EmptyStack(t *testing.T) {
 // stack has middlewares.
 func TestMiddlewares_StackWithMiddlewares(t *testing.T) {
 	// Create some mock middleware wrappers.
-	mw1 := api.MiddlewareWrapper{
+	mw1 := MiddlewareWrapper{
 		ID:         "auth",
 		Middleware: MockMiddleware,
 	}
-	mw2 := api.MiddlewareWrapper{
+	mw2 := MiddlewareWrapper{
 		ID:         "logging",
 		Middleware: MockMiddleware,
 	}
@@ -74,8 +74,8 @@ func TestMiddlewares_Order(t *testing.T) {
 
 	// Create the middleware stack
 	mwStack := Stack{
-		api.MiddlewareWrapper{ID: "first", Middleware: mw1},
-		api.MiddlewareWrapper{ID: "second", Middleware: mw2},
+		MiddlewareWrapper{ID: "first", Middleware: mw1},
+		MiddlewareWrapper{ID: "second", Middleware: mw2},
 	}
 
 	// Get the middleware functions from the stack
@@ -105,11 +105,11 @@ func TestMiddlewares_Order(t *testing.T) {
 // TestInsertAfterID_Success tests the InsertAfterID function when the
 // middleware is inserted successfully.
 func TestInsertAfterID_Success(t *testing.T) {
-	mw1 := api.MiddlewareWrapper{ID: "auth"}
-	mw2 := api.MiddlewareWrapper{ID: "logging"}
+	mw1 := MiddlewareWrapper{ID: "auth"}
+	mw2 := MiddlewareWrapper{ID: "logging"}
 	mwStack := Stack{mw1, mw2}
 
-	newMiddleware := api.MiddlewareWrapper{ID: "metrics"}
+	newMiddleware := MiddlewareWrapper{ID: "metrics"}
 
 	inserted := mwStack.InsertAfterID("auth", newMiddleware)
 
@@ -123,11 +123,11 @@ func TestInsertAfterID_Success(t *testing.T) {
 // TestInsertAfterID_AppendToEnd tests the InsertAfterID function when the
 // middleware is appended to the end.
 func TestInsertAfterID_AppendToEnd(t *testing.T) {
-	mw1 := api.MiddlewareWrapper{ID: "auth"}
-	mw2 := api.MiddlewareWrapper{ID: "logging"}
+	mw1 := MiddlewareWrapper{ID: "auth"}
+	mw2 := MiddlewareWrapper{ID: "logging"}
 	mwStack := Stack{mw1, mw2}
 
-	newMiddleware := api.MiddlewareWrapper{ID: "metrics"}
+	newMiddleware := MiddlewareWrapper{ID: "metrics"}
 
 	inserted := mwStack.InsertAfterID("logging", newMiddleware)
 
@@ -141,11 +141,11 @@ func TestInsertAfterID_AppendToEnd(t *testing.T) {
 // TestInsertAfterID_IDNotFound tests the InsertAfterID function when the
 // middleware ID is not found.
 func TestInsertAfterID_IDNotFound(t *testing.T) {
-	mw1 := api.MiddlewareWrapper{ID: "auth"}
-	mw2 := api.MiddlewareWrapper{ID: "logging"}
+	mw1 := MiddlewareWrapper{ID: "auth"}
+	mw2 := MiddlewareWrapper{ID: "logging"}
 	mwStack := Stack{mw1, mw2}
 
-	newMiddleware := api.MiddlewareWrapper{ID: "metrics"}
+	newMiddleware := MiddlewareWrapper{ID: "metrics"}
 
 	inserted := mwStack.InsertAfterID("non-existent-id", newMiddleware)
 
