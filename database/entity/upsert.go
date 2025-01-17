@@ -63,16 +63,7 @@ func UpsertMany[T any](
 		insertedValues,
 		updateProjections,
 	)
-	statement, err := preparer.Prepare(query)
-	if err != nil {
-		return 0, err
-	}
-	defer statement.Close()
 
-	result, err := statement.Exec(values...)
-	if err != nil {
-		return 0, err
-	}
-
+	result, err := Exec(preparer, query, values)
 	return checkInsertResult(result, err, errorChecker)
 }

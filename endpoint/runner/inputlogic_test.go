@@ -8,7 +8,7 @@ import (
 
 	"github.com/pakkasys/fluidapi/core/api"
 	"github.com/pakkasys/fluidapi/core/client"
-	"github.com/pakkasys/fluidapi/database/entity"
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 	"github.com/pakkasys/fluidapi/endpoint/definition"
@@ -64,7 +64,7 @@ func (m MockParseableInput) Parse() (*ParsedGetEndpointInput, error) {
 // MockGetServiceFunc represents a mock implementation of GetServiceFunc.
 func MockGetServiceFunc(
 	ctx context.Context,
-	opts entity.GetOptions,
+	opts query.GetOptions,
 ) ([]string, error) {
 	return []string{"entity1", "entity2"}, nil
 }
@@ -148,7 +148,7 @@ func (m MockParseableDeleteInput) Parse() (*ParsedDeleteEndpointInput, error) {
 func MockDeleteServiceFunc(
 	ctx context.Context,
 	databaseSelectors []util.Selector,
-	opts *entity.DeleteOptions,
+	opts *query.DeleteOptions,
 ) (int64, error) {
 	return 1, nil
 }
@@ -179,7 +179,6 @@ func MockMiddlewareWrapper[I ValidatedInput, O any](
 				_, _ = w.Write([]byte("Success"))
 			})
 		},
-		Inputs: []any{*inputFactory()},
 	}
 }
 
@@ -505,7 +504,7 @@ func TestUpdateEndpointDefinition(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.UpdateOptions,
+		databaseUpdates []query.UpdateOptions,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -835,7 +834,7 @@ func TestParseUpdateEndpointInput_ValidInput(t *testing.T) {
 	}
 	assert.Equal(t, expectedSelectors, result.DatabaseSelectors, "ParsedUpdateEndpointInput should have the correct selectors")
 
-	expectedUpdates := []entity.UpdateOptions{
+	expectedUpdates := []query.UpdateField{
 		{
 			Field: "column1",
 			Value: "new_value",

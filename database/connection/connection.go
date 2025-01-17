@@ -10,6 +10,10 @@ import (
 const (
 	TCP  = "tcp"  // TCP connection type
 	Unix = "unix" // Unix socket connection type
+
+	MySQL    = "mysql"    // MySQL driver name
+	Postgres = "postgres" // PostgreSQL driver name
+	SQLite3  = "sqlite3"  // SQLite3 driver name
 )
 
 // DriverFactory is a function that creates a database driver.
@@ -39,27 +43,49 @@ type Config struct {
 //
 //   - cfg: The configuration for the database connection.
 //   - dbFactory: The factory function to create the database driver.
-func Connect(cfg *Config, dbFactory DriverFactory) (util.DB, error) {
-	dsn, err := getDSN(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err := dbFactory(cfg.Driver, *dsn)
+//   - dsn: The database connection string.
+func Connect(
+	cfg Config,
+	dbFactory DriverFactory,
+	dsn string,
+) (util.DB, error) {
+	db, err := dbFactory(cfg.Driver, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	configureConnection(db, cfg)
 
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
 	return db, nil
 }
 
-func getDSN(cfg *Config) (*string, error) {
-	switch cfg.ConnectionType {
-	case TCP:
-		dsn := fmt.Sprintf(
-			cfg.DSNFormat,
+// GetDSN generates a database connection string based on the provided
+// configuration.
+//
+//   - cfg: The configuration for the database connection.
+func GetDSN(cfg Config) (*string, error) {
+	var dsn string
+	switch cfg.Driver {
+	case MySQL:
+		// MySQL DSN is usually something like:
+		// "user:pass@tcp(host:port)/dbname?param=value"
+		dsn = fmt.Sprintf("%s:%s@%s(%s:%d)/%s?%s",
+			cfg.User,
+			cfg.Password,
+			cfg.ConnectionType, // "tcp" or "unix"
+			cfg.Host,
+			cfg.Port,
+			cfg.Database,
+			cfg.Parameters,
+		)
+	case Postgres:
+		// Postgres DSN is usually something like:
+		// "postgres://user:pass@host:port/dbname?param=value"
+		dsn = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s",
 			cfg.User,
 			cfg.Password,
 			cfg.Host,
@@ -67,28 +93,16 @@ func getDSN(cfg *Config) (*string, error) {
 			cfg.Database,
 			cfg.Parameters,
 		)
-		return &dsn, nil
-	case Unix:
-		dsn := fmt.Sprintf(
-			cfg.DSNFormat,
-			cfg.User,
-			cfg.Password,
-			cfg.SocketDirectory,
-			cfg.SocketName,
-			cfg.Database,
-			cfg.Parameters,
-		)
-		return &dsn, nil
+	case SQLite3:
+		// SQLite DSN is usually just the file path + params
+		dsn = fmt.Sprintf("%s?%s", cfg.Database, cfg.Parameters)
 	default:
-		return nil, fmt.Errorf(
-			"unsupported connection type: %s",
-			cfg.ConnectionType,
-		)
+		return nil, fmt.Errorf("unsupported driver: %s", cfg.Driver)
 	}
+	return &dsn, nil
 }
 
-// TODO: Opinionated, move elsewhere
-func configureConnection(db util.DB, cfg *Config) {
+func configureConnection(db util.DB, cfg Config) {
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 	db.SetMaxOpenConns(cfg.MaxOpenConns)

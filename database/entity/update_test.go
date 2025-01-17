@@ -12,240 +12,191 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// TestUpdateEntities_NormalOperation tests the normal operation where updates
-// are successfully applied.
-func TestUpdateEntities_NormalOperation(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockResult := new(utilmock.MockResult)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	// Test table name, updates, and selectors
-	tableName := "user"
-	updateFields := []query.UpdateField{
-		{Field: "name", Value: "Alice"},
+// TestUpdate tests the Update function
+func TestUpdate(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupMocks func(
+			mockDB *utilmock.MockDB,
+			mockStmt *utilmock.MockStmt,
+			mockResult *utilmock.MockResult,
+			mockErrorChecker *entitymock.MockErrorChecker,
+		)
+		updateFields  []query.UpdateField
+		selectors     []util.Selector
+		expectedRows  int64
+		expectedError string
+	}{
+		{
+			name: "Normal Operation",
+			setupMocks: func(
+				mockDB *utilmock.MockDB,
+				mockStmt *utilmock.MockStmt,
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
+				mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
+				mockStmt.On("Close").Return(nil)
+				mockResult.On("RowsAffected").Return(int64(2), nil)
+			},
+			updateFields: []query.UpdateField{
+				{Field: "name", Value: "Alice"},
+			},
+			selectors: []util.Selector{
+				{Field: "id", Value: 1},
+			},
+			expectedRows:  2,
+			expectedError: "",
+		},
+		{
+			name:          "No Updates",
+			setupMocks:    nil,
+			updateFields:  []query.UpdateField{},
+			selectors:     []util.Selector{{Field: "id", Value: 1}},
+			expectedRows:  0,
+			expectedError: "",
+		},
+		{
+			name: "Exec Error",
+			setupMocks: func(
+				mockDB *utilmock.MockDB,
+				mockStmt *utilmock.MockStmt,
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
+				mockStmt.On("Exec", mock.Anything).Return(nil, errors.New("exec error"))
+				mockStmt.On("Close").Return(nil)
+				mockErrorChecker.On("Check", mock.Anything).Return(errors.New("exec error"))
+			},
+			updateFields: []query.UpdateField{
+				{Field: "name", Value: "Alice"},
+			},
+			selectors: []util.Selector{
+				{Field: "id", Value: 1},
+			},
+			expectedRows:  0,
+			expectedError: "exec error",
+		},
 	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := new(utilmock.MockDB)
+			mockStmt := new(utilmock.MockStmt)
+			mockResult := new(utilmock.MockResult)
+			mockErrorChecker := new(entitymock.MockErrorChecker)
+
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockDB, mockStmt, mockResult, mockErrorChecker)
+			}
+
+			// Act
+			rows, err := Update(
+				mockDB,
+				"user_table",
+				tt.selectors,
+				tt.updateFields,
+				mockErrorChecker,
+			)
+
+			// Assert
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedRows, rows)
+
+			// Verify mock expectations
+			mockDB.AssertExpectations(t)
+			mockStmt.AssertExpectations(t)
+			mockResult.AssertExpectations(t)
+			mockErrorChecker.AssertExpectations(t)
+		})
 	}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
-	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
-	mockStmt.On("Close").Return(nil)
-	mockResult.On("RowsAffected").Return(int64(1), nil)
-
-	rowsAffected, err :=
-		Update(mockDB, tableName, selectors, updateFields, mockSQLUtil)
-
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), rowsAffected)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-	mockResult.AssertExpectations(t)
 }
 
-// TestUpdateEntities_NoUpdates tests the case where no updates are provided.
-func TestUpdateEntities_NoUpdates(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	// Test table name and selectors
-	tableName := "user"
-	updateFields := []query.UpdateField{}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+// TestCheckUpdateResult tests the CheckUpdateResult function
+func TestCheckUpdateResult(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupMocks func(
+			mockResult *utilmock.MockResult,
+			mockErrorChecker *entitymock.MockErrorChecker,
+		)
+		inputErr      error
+		expectedRows  int64
+		expectedError string
+	}{
+		{
+			name: "Normal Operation",
+			setupMocks: func(
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockResult.On("RowsAffected").Return(int64(3), nil)
+			},
+			inputErr:      nil,
+			expectedRows:  3,
+			expectedError: "",
+		},
+		{
+			name: "Exec Error",
+			setupMocks: func(
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockErrorChecker.On("Check", errors.New("exec error")).
+					Return(errors.New("exec error"))
+			},
+			inputErr:      errors.New("exec error"),
+			expectedRows:  0,
+			expectedError: "exec error",
+		},
+		{
+			name: "RowsAffected Error",
+			setupMocks: func(
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockResult.On("RowsAffected").
+					Return(int64(0), errors.New("rows affected error"))
+			},
+			inputErr:      nil,
+			expectedRows:  0,
+			expectedError: "rows affected error",
+		},
 	}
 
-	rowsAffected, err :=
-		Update(mockDB, tableName, selectors, updateFields, mockSQLUtil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockResult := new(utilmock.MockResult)
+			mockErrorChecker := new(entitymock.MockErrorChecker)
 
-	assert.NoError(t, err)
-	assert.Equal(t, int64(0), rowsAffected)
-	mockDB.AssertExpectations(t)
-}
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockResult, mockErrorChecker)
+			}
 
-// TestUpdateEntities_Error tests the case where an error occurs during the
-// update process.
-func TestUpdateEntities_Error(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
+			// Act
+			rows, err := checkUpdateResult(
+				mockResult,
+				tt.inputErr,
+				mockErrorChecker,
+			)
 
-	// Test table name, updates, and selectors
-	tableName := "user"
-	updateFields := []query.UpdateField{
-		{Field: "name", Value: "Alice"},
+			// Assert
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedRows, rows)
+
+			// Verify mock expectations
+			mockResult.AssertExpectations(t)
+			mockErrorChecker.AssertExpectations(t)
+		})
 	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	// Simulate an error during Prepare
-	mockDB.On("Prepare", mock.Anything).
-		Return(nil, errors.New("prepare error"))
-	mockSQLUtil.On("CheckDBError", mock.Anything).
-		Return(errors.New("prepare error"))
-
-	rowsAffected, err :=
-		Update(mockDB, tableName, selectors, updateFields, mockSQLUtil)
-
-	assert.Equal(t, int64(0), rowsAffected)
-	assert.EqualError(t, err, "prepare error")
-	mockDB.AssertExpectations(t)
-	mockSQLUtil.AssertExpectations(t)
-}
-
-// TestCheckUpdateResult_NormalOperation tests the normal operation where rows
-// are affected.
-func TestCheckUpdateResult_NormalOperation(t *testing.T) {
-	mockResult := new(utilmock.MockResult)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	// Setup mock expectations
-	mockResult.On("RowsAffected").Return(int64(1), nil)
-
-	rowsAffected, err := checkUpdateResult(mockResult, nil, mockSQLUtil)
-
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), rowsAffected)
-	mockResult.AssertExpectations(t)
-}
-
-// TestCheckUpdateResult_OtherError tests the case where a non-MySQL error
-// occurs.
-func TestCheckUpdateResult_OtherError(t *testing.T) {
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	otherErr := errors.New("some other error")
-	mockSQLUtil.On("CheckDBError", otherErr).Return(otherErr)
-
-	rowsAffected, err := checkUpdateResult(nil, otherErr, mockSQLUtil)
-
-	assert.Equal(t, int64(0), rowsAffected)
-	assert.EqualError(t, err, "some other error")
-	mockSQLUtil.AssertExpectations(t)
-}
-
-// TestCheckUpdateResult_RowsAffectedError tests the case where an error occurs
-// when retrieving rows affected.
-func TestCheckUpdateResult_RowsAffectedError(t *testing.T) {
-	mockResult := new(utilmock.MockResult)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	// Simulate an error when retrieving RowsAffected
-	mockResult.On("RowsAffected").
-		Return(int64(0), errors.New("rows affected error"))
-
-	rowsAffected, err := checkUpdateResult(mockResult, nil, mockSQLUtil)
-
-	assert.Equal(t, int64(0), rowsAffected)
-	assert.EqualError(t, err, "rows affected error")
-	mockResult.AssertExpectations(t)
-}
-
-// TestUpdate_NormalOperation tests the normal operation of the update function.
-func TestUpdate_NormalOperation(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockResult := new(utilmock.MockResult)
-
-	// Test table name, updates, and selectors
-	tableName := "user"
-	updateFields := []query.UpdateField{
-		{Field: "name", Value: "Alice"},
-	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
-	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
-	mockStmt.On("Close").Return(nil)
-
-	result, err := update(mockDB, tableName, updateFields, selectors)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-	mockResult.AssertExpectations(t)
-}
-
-// TestUpdate_PrepareError tests the case where an error occurs during the
-// preparation of the statement.
-func TestUpdate_PrepareError(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-
-	// Test table name, updates, and selectors
-	tableName := "user"
-	updateFields := []query.UpdateField{
-		{Field: "name", Value: "Alice"},
-	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	// Simulate an error during Prepare
-	mockDB.On("Prepare", mock.Anything).Return(nil, errors.New("prepare error"))
-
-	result, err := update(mockDB, tableName, updateFields, selectors)
-
-	assert.Nil(t, result)
-	assert.EqualError(t, err, "prepare error")
-	mockDB.AssertExpectations(t)
-}
-
-// TestUpdate_ExecError tests the case where an error occurs during the
-// execution of the statement.
-func TestUpdate_ExecError(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-
-	// Test table name, updates, and selectors
-	tableName := "user"
-	updates := []query.UpdateField{
-		{Field: "name", Value: "Alice"},
-	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
-	mockStmt.On("Exec", mock.Anything).Return(nil, errors.New("exec error"))
-	mockStmt.On("Close").Return(nil)
-
-	result, err := update(mockDB, tableName, updates, selectors)
-
-	assert.Nil(t, result)
-	assert.EqualError(t, err, "exec error")
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-}
-
-// TestUpdate_EmptyUpdates tests the case where no updates are provided.
-func TestUpdate_EmptyUpdates(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockResult := new(utilmock.MockResult)
-
-	// Test table name and selectors
-	tableName := "user"
-	updateFields := []query.UpdateField{}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
-	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
-	mockStmt.On("Close").Return(nil)
-
-	result, err := update(mockDB, tableName, updateFields, selectors)
-
-	assert.NotNil(t, result)
-	assert.Nil(t, err)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
 }

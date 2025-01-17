@@ -3,21 +3,26 @@ package runner
 import (
 	"net/http"
 
-	"github.com/pakkasys/fluidapi/database/errors"
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
 	"github.com/pakkasys/fluidapi/endpoint/middleware/inputlogic"
 	"github.com/pakkasys/fluidapi/endpoint/order"
 	"github.com/pakkasys/fluidapi/endpoint/page"
 	"github.com/pakkasys/fluidapi/endpoint/selector"
 )
 
+var (
+	DuplicateEntryError    = apierror.New[error]("DUPLICATE_ENTRY")
+	ForeignConstraintError = apierror.New[error]("FOREIGN_CONSTRAINT_ERROR")
+)
+
 var CreateErrors []inputlogic.ExpectedError = []inputlogic.ExpectedError{
 	{
-		ID:         errors.DuplicateEntryError.ID(),
+		ID:         DuplicateEntryError.ID(),
 		Status:     http.StatusBadRequest,
 		PublicData: false,
 	},
 	{
-		ID:         errors.ForeignConstraintError.ID(),
+		ID:         ForeignConstraintError.ID(),
 		Status:     http.StatusBadRequest,
 		PublicData: false,
 	},
@@ -83,12 +88,12 @@ var UpdateErrors []inputlogic.ExpectedError = []inputlogic.ExpectedError{
 		PublicData: true,
 	},
 	{
-		ID:         errors.DuplicateEntryError.ID(),
+		ID:         DuplicateEntryError.ID(),
 		Status:     http.StatusBadRequest,
 		PublicData: false,
 	},
 	{
-		ID:         errors.ForeignConstraintError.ID(),
+		ID:         ForeignConstraintError.ID(),
 		Status:     http.StatusBadRequest,
 		PublicData: false,
 	},

@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pakkasys/fluidapi/database/entity"
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/middleware/inputlogic"
 
@@ -47,7 +47,7 @@ type ToGetEndpointOutput[ServiceOutput any, EndpointOutput any] func(
 type UpdateServiceFunc func(
 	ctx context.Context,
 	databaseSelectors []util.Selector,
-	databaseUpdates []entity.UpdateOptions,
+	databaseUpdates []query.UpdateField,
 ) (int64, error)
 
 // ToUpdateEndpointOutput represents a function type to convert update count to
@@ -61,7 +61,7 @@ type ToUpdateEndpointOutput[EndpointOutput any] func(
 type DeleteServiceFunc func(
 	ctx context.Context,
 	databaseSelectors []util.Selector,
-	opts *entity.DeleteOptions,
+	opts *query.DeleteOptions,
 ) (int64, error)
 
 // ToDeleteEndpointOutput represents a function type to convert delete count to
@@ -74,7 +74,7 @@ type ToDeleteEndpointOutput[EndpointOutput any] func(
 // database.
 type GetServiceFunc[Output any] func(
 	ctx context.Context,
-	opts entity.GetOptions,
+	opts query.GetOptions,
 ) ([]Output, error)
 
 // GetCountFunc represents a function type to get the count of entities from the
@@ -240,7 +240,7 @@ func runGetService[Output any](
 
 		entities, err := serviceFn(
 			ctx,
-			entity.GetOptions{
+			query.GetOptions{
 				Selectors:   parsedEndpoint.DatabaseSelectors,
 				Orders:      parsedEndpoint.Orders,
 				Page:        parsedEndpoint.Page,

@@ -5,8 +5,7 @@ import (
 	"net/http"
 
 	apierror "github.com/pakkasys/fluidapi/core/api/error"
-	"github.com/pakkasys/fluidapi/core/client"
-	"github.com/pakkasys/fluidapi/database/entity"
+	"github.com/pakkasys/fluidapi/database/query"
 	databaseutil "github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 	"github.com/pakkasys/fluidapi/endpoint/definition"
@@ -14,6 +13,7 @@ import (
 	"github.com/pakkasys/fluidapi/endpoint/middleware/inputlogic"
 	"github.com/pakkasys/fluidapi/endpoint/order"
 	"github.com/pakkasys/fluidapi/endpoint/page"
+	"github.com/pakkasys/fluidapi/endpoint/runner/client"
 	"github.com/pakkasys/fluidapi/endpoint/selector"
 	"github.com/pakkasys/fluidapi/endpoint/update"
 )
@@ -48,7 +48,7 @@ type SendFunc[I any, W any] func(
 	input *I,
 	// The host to send the request to.
 	host string,
-) (*client.Response[I, W], error)
+) (*client.Response[W], error)
 
 // Client represents an HTTP client used to communicate with an API endpoint.
 type Client[I any, O any, W any] struct {
@@ -317,13 +317,13 @@ type ParsedGetEndpointInput struct {
 
 type ParsedUpdateEndpointInput struct {
 	DatabaseSelectors databaseutil.Selectors
-	DatabaseUpdates   []entity.UpdateOptions
+	DatabaseUpdates   []query.UpdateField
 	Upsert            bool
 }
 
 type ParsedDeleteEndpointInput struct {
 	DatabaseSelectors databaseutil.Selectors
-	DeleteOpts        *entity.DeleteOptions
+	DeleteOpts        *query.DeleteOptions
 }
 
 // ParseGetEndpointInput parses input for a GET endpoint, translating
@@ -477,7 +477,7 @@ func ParseDeleteEndpointInput(
 
 	return &ParsedDeleteEndpointInput{
 		DatabaseSelectors: dbSelectors,
-		DeleteOpts: &entity.DeleteOptions{
+		DeleteOpts: &query.DeleteOptions{
 			Limit:  limit,
 			Orders: dbOrders,
 		},

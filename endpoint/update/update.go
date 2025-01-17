@@ -2,7 +2,7 @@ package update
 
 import (
 	apierror "github.com/pakkasys/fluidapi/core/api/error"
-	"github.com/pakkasys/fluidapi/database/entity"
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/endpoint/dbfield"
 )
 
@@ -31,8 +31,8 @@ type Update struct {
 func ToDBUpdates(
 	updates []Update,
 	apiToDBFieldMap map[string]dbfield.DBField,
-) ([]entity.UpdateOptions, error) {
-	var dbUpdates []entity.UpdateOptions
+) ([]query.UpdateField, error) {
+	var dbUpdates []query.UpdateField
 
 	for i := range updates {
 		matchedUpdate := updates[i]
@@ -49,7 +49,7 @@ func ToDBUpdates(
 
 		dbUpdates = append(
 			dbUpdates,
-			entity.UpdateOptions{
+			query.UpdateField{
 				Field: dbField.Column,
 				Value: matchedUpdate.Value,
 			},

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/pakkasys/fluidapi/database/entity"
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/middleware/inputlogic"
 	"github.com/pakkasys/fluidapi/endpoint/page"
@@ -185,7 +186,7 @@ func TestUpdateInvoke_Success(t *testing.T) {
 				Value:     "value1",
 			},
 		},
-		DatabaseUpdates: []entity.UpdateOptions{
+		DatabaseUpdates: []query.UpdateField{
 			{Field: "column1", Value: "newValue"},
 		},
 	}
@@ -197,7 +198,7 @@ func TestUpdateInvoke_Success(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.UpdateOptions,
+		databaseUpdates []query.UpdateField,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -231,7 +232,7 @@ func TestUpdateInvoke_ParseError(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.UpdateOptions,
+		databaseUpdates []query.UpdateField,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -258,7 +259,7 @@ func TestUpdateInvoke_ServiceError(t *testing.T) {
 
 	parsedInput := &ParsedUpdateEndpointInput{
 		DatabaseSelectors: util.Selectors{},
-		DatabaseUpdates: []entity.UpdateOptions{
+		DatabaseUpdates: []query.UpdateField{
 			{Field: "column1", Value: "newValue"},
 		},
 	}
@@ -270,7 +271,7 @@ func TestUpdateInvoke_ServiceError(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.UpdateOptions,
+		databaseUpdates []query.UpdateField,
 	) (int64, error) {
 		return 0, errors.New("service error")
 	}
@@ -342,7 +343,7 @@ func TestDeleteInvoke_Success(t *testing.T) {
 				Value:     "value1",
 			},
 		},
-		DeleteOpts: &entity.DeleteOptions{
+		DeleteOpts: &query.DeleteOptions{
 			Limit: 1,
 		},
 	}
@@ -354,7 +355,7 @@ func TestDeleteInvoke_Success(t *testing.T) {
 	mockDeleteServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		opts *entity.DeleteOptions,
+		opts *query.DeleteOptions,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -388,7 +389,7 @@ func TestDeleteInvoke_ParseError(t *testing.T) {
 	mockDeleteServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		opts *entity.DeleteOptions,
+		opts *query.DeleteOptions,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -422,7 +423,7 @@ func TestDeleteInvoke_ServiceError(t *testing.T) {
 				Value:     "value1",
 			},
 		},
-		DeleteOpts: &entity.DeleteOptions{
+		DeleteOpts: &query.DeleteOptions{
 			Limit: 1,
 		},
 	}
@@ -434,7 +435,7 @@ func TestDeleteInvoke_ServiceError(t *testing.T) {
 	mockDeleteServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		opts *entity.DeleteOptions,
+		opts *query.DeleteOptions,
 	) (int64, error) {
 		return 0, errors.New("service error")
 	}
@@ -523,7 +524,7 @@ func TestRunGetService_FetchEntities_Success(t *testing.T) {
 		GetCount:          false,
 	}
 
-	mockGetServiceFunc := func(ctx context.Context, opts entity.GetOptions) ([]string, error) {
+	mockGetServiceFunc := func(ctx context.Context, opts query.GetOptions) ([]string, error) {
 		return []string{"entity1", "entity2"}, nil
 	}
 
@@ -545,7 +546,7 @@ func TestRunGetService_FetchEntities_Error(t *testing.T) {
 		GetCount:          false,
 	}
 
-	mockGetServiceFunc := func(ctx context.Context, opts entity.GetOptions) ([]string, error) {
+	mockGetServiceFunc := func(ctx context.Context, opts query.GetOptions) ([]string, error) {
 		return nil, errors.New("service function error")
 	}
 

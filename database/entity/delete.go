@@ -1,8 +1,6 @@
 package entity
 
 import (
-	"database/sql"
-
 	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 )
@@ -19,7 +17,9 @@ func Delete(
 	selectors []util.Selector,
 	opts *query.DeleteOptions,
 ) (int64, error) {
-	result, err := delete(preparer, tableName, selectors, opts)
+	query, whereValues := query.Delete(tableName, selectors, opts)
+
+	result, err := Exec(preparer, query, whereValues)
 	if err != nil {
 		return 0, err
 	}
@@ -30,26 +30,4 @@ func Delete(
 	}
 
 	return rowsAffected, nil
-}
-
-func delete(
-	preparer util.Preparer,
-	tableName string,
-	selectors []util.Selector,
-	opts *query.DeleteOptions,
-) (sql.Result, error) {
-	query, whereValues := query.Delete(tableName, selectors, opts)
-
-	statement, err := preparer.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer statement.Close()
-
-	res, err := statement.Exec(whereValues...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
 }

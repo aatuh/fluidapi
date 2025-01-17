@@ -11,149 +11,181 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// TestUpsertEntity_NormalOperation tests the normal operation of UpsertEntity.
-func TestUpsertEntity_NormalOperation(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockResult := new(utilmock.MockResult)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	// Test entity and projections
-	entity := &TestEntity{ID: 1, Name: "Alice"}
-	projections := []util.Projection{
-		{Column: "name", Alias: "test"},
-	}
-
-	// Inserter function for the entity
-	inserter := func(e *TestEntity) ([]string, []any) {
-		return []string{"id", "name"}, []any{e.ID, e.Name}
-	}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
-	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
-	mockStmt.On("Close").Return(nil)
-	mockResult.On("LastInsertId").Return(int64(0), nil)
-
-	_, err := Upsert(
-		mockDB,
-		"user",
-		entity,
-		inserter,
-		projections,
-		mockSQLUtil,
-	)
-
-	assert.NoError(t, err)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-	mockResult.AssertExpectations(t)
+type UpsertTestStruct struct {
+	ID   int64
+	Name string
 }
 
-// TestUpsertEntities_NormalOperation tests the normal operation of
-// UpsertEntities.
-func TestUpsertEntities_NormalOperation(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockResult := new(utilmock.MockResult)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
+// TestUpsert tests the Upsert function.
+func TestUpsert(t *testing.T) {
+	// Use TestUpsertMany to cover functionality since Upsert is a wrapper
+	// that delegates to UpsertMany.
+	t.Run("Delegates to UpsertMany", func(t *testing.T) {
+		mockDB := new(utilmock.MockDB)
+		mockStmt := new(utilmock.MockStmt)
+		mockResult := new(utilmock.MockResult)
+		mockErrorChecker := new(entitymock.MockErrorChecker)
 
-	// Test entities and projections
-	entities := []*TestEntity{
-		{ID: 1, Name: "Alice"},
-		{ID: 2, Name: "Bob"},
-	}
-	projections := []util.Projection{
-		{Column: "name", Alias: "test"},
-	}
+		mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
+		mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
+		mockStmt.On("Close").Return(nil)
+		mockResult.On("LastInsertId").Return(int64(1), nil)
 
-	// Inserter function for multiple entities
-	inserter := func(e *TestEntity) ([]string, []any) {
-		return []string{"id", "name"}, []any{e.ID, e.Name}
-	}
+		inserter := func(entity *UpsertTestStruct) ([]string, []any) {
+			return []string{"id", "name"}, []any{entity.ID, entity.Name}
+		}
 
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
-	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
-	mockStmt.On("Close").Return(nil)
-	mockResult.On("LastInsertId").Return(int64(0), nil)
+		id, err := Upsert(
+			mockDB,
+			"user_table",
+			&UpsertTestStruct{ID: 1, Name: "Alice"},
+			inserter,
+			[]util.Projection{{Table: "name", Alias: "name_alias"}},
+			mockErrorChecker,
+		)
 
-	_, err := UpsertMany(
-		mockDB,
-		"user",
-		entities,
-		inserter,
-		projections,
-		mockSQLUtil,
-	)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), id)
 
-	assert.NoError(t, err)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-	mockResult.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+		mockStmt.AssertExpectations(t)
+		mockResult.AssertExpectations(t)
+		mockErrorChecker.AssertExpectations(t)
+	})
 }
 
-// TestUpsertEntities_EmptyEntities tests the case where the entities list is
-// empty.
-func TestUpsertEntities_EmptyEntities(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	expectedError := errors.New("must provide entities to upsert")
-	mockSQLUtil.On("CheckDBError", expectedError).Return(expectedError)
-
-	_, err := UpsertMany(
-		mockDB,
-		"user",
-		[]*TestEntity{},
-		func(e *TestEntity) ([]string, []any) {
-			return []string{}, []any{}
+// TestUpsertMany tests the UpsertMany function
+func TestUpsertMany(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupMocks func(
+			mockDB *utilmock.MockDB,
+			mockStmt *utilmock.MockStmt,
+			mockResult *utilmock.MockResult,
+			mockErrorChecker *entitymock.MockErrorChecker,
+		)
+		entities          []*UpsertTestStruct
+		updateProjections []util.Projection
+		expectedID        int64
+		expectedError     string
+	}{
+		{
+			name: "Normal Operation",
+			setupMocks: func(
+				mockDB *utilmock.MockDB,
+				mockStmt *utilmock.MockStmt,
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
+				mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
+				mockStmt.On("Close").Return(nil)
+				mockResult.On("LastInsertId").Return(int64(1), nil)
+			},
+			entities: []*UpsertTestStruct{
+				{ID: 1, Name: "Alice"},
+			},
+			updateProjections: []util.Projection{
+				{Table: "name", Alias: "name_alias"},
+			},
+			expectedID:    1,
+			expectedError: "",
 		},
-		[]util.Projection{{Column: "name", Alias: "test"}},
-		mockSQLUtil,
-	)
-
-	assert.EqualError(t, err, "must provide entities to upsert")
-	mockDB.AssertExpectations(t)
-	mockSQLUtil.AssertExpectations(t)
-}
-
-// TestUpsertEntities_ErrorFromUpsertMany tests the case where upsertMany
-// returns an error.
-func TestUpsertEntities_ErrorFromUpsertMany(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockSQLUtil := new(entitymock.MockSQLUtil)
-
-	// Test entities and projections
-	entities := []*TestEntity{
-		{ID: 1, Name: "Alice"},
-		{ID: 2, Name: "Bob"},
+		{
+			name:       "No Entities",
+			setupMocks: nil,
+			entities:   []*UpsertTestStruct{},
+			updateProjections: []util.Projection{
+				{Table: "name", Alias: "name_alias"},
+			},
+			expectedID:    0,
+			expectedError: "must provide entities to upsert",
+		},
+		{
+			name:       "No Update Projections",
+			setupMocks: nil,
+			entities: []*UpsertTestStruct{
+				{ID: 1, Name: "Alice"},
+			},
+			updateProjections: []util.Projection{},
+			expectedID:        0,
+			expectedError:     "must provide update projections",
+		},
+		{
+			name:       "No Alias in Update Projections",
+			setupMocks: nil,
+			entities: []*UpsertTestStruct{
+				{ID: 1, Name: "Alice"},
+			},
+			updateProjections: []util.Projection{
+				{Table: "name", Alias: ""},
+			},
+			expectedID:    0,
+			expectedError: "must provide update projections alias",
+		},
+		{
+			name: "Exec Error",
+			setupMocks: func(
+				mockDB *utilmock.MockDB,
+				mockStmt *utilmock.MockStmt,
+				mockResult *utilmock.MockResult,
+				mockErrorChecker *entitymock.MockErrorChecker,
+			) {
+				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
+				mockStmt.On("Exec", mock.Anything).Return(nil, errors.New("exec error"))
+				mockStmt.On("Close").Return(nil)
+				mockErrorChecker.On("Check", mock.Anything).Return(errors.New("exec error"))
+			},
+			entities: []*UpsertTestStruct{
+				{ID: 1, Name: "Alice"},
+			},
+			updateProjections: []util.Projection{
+				{Table: "name", Alias: "name_alias"},
+			},
+			expectedID:    0,
+			expectedError: "exec error",
+		},
 	}
-	projections := []util.Projection{
-		{Column: "name", Alias: "test"},
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := new(utilmock.MockDB)
+			mockStmt := new(utilmock.MockStmt)
+			mockResult := new(utilmock.MockResult)
+			mockErrorChecker := new(entitymock.MockErrorChecker)
+
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockDB, mockStmt, mockResult, mockErrorChecker)
+			}
+
+			// Define inserter function
+			inserter := func(entity *UpsertTestStruct) ([]string, []any) {
+				return []string{"id", "name"}, []any{entity.ID, entity.Name}
+			}
+
+			// Act
+			id, err := UpsertMany(
+				mockDB,
+				"user_table",
+				tt.entities,
+				inserter,
+				tt.updateProjections,
+				mockErrorChecker,
+			)
+
+			// Assert
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedID, id)
+
+			// Verify mock expectations
+			mockDB.AssertExpectations(t)
+			mockStmt.AssertExpectations(t)
+			mockResult.AssertExpectations(t)
+			mockErrorChecker.AssertExpectations(t)
+		})
 	}
-
-	// Inserter function for multiple entities
-	inserter := func(e *TestEntity) ([]string, []any) {
-		return []string{"id", "name"}, []any{e.ID, e.Name}
-	}
-
-	// Simulate an error in the upsertMany call
-	mockDB.On("Prepare", mock.Anything).
-		Return(nil, errors.New("prepare error"))
-	mockSQLUtil.On("CheckDBError", mock.Anything).
-		Return(errors.New("prepare error"))
-
-	_, err := UpsertMany(
-		mockDB,
-		"user",
-		entities,
-		inserter,
-		projections,
-		mockSQLUtil,
-	)
-
-	assert.EqualError(t, err, "prepare error")
-	mockDB.AssertExpectations(t)
-	mockSQLUtil.AssertExpectations(t)
 }

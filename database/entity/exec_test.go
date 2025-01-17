@@ -8,138 +8,175 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestRowsQuery_NormalOperation tests the normal operation of RowsQuery.
-func TestRowsQuery_NormalOperation(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockRows := new(utilmock.MockRows)
+// TestExec tests the Exec method.
+func TestExec(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMocks    func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult)
+		query         string
+		parameters    []any
+		expectedError string
+		expectResult  bool
+	}{
+		{
+			name: "Normal Operation",
+			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult) {
+				mockDB.On("Prepare", "UPDATE users SET name = ? WHERE id = ?").Return(mockStmt, nil)
+				mockStmt.On("Exec", []any{"Alice", 1}).Return(mockResult, nil)
+				mockStmt.On("Close").Return(nil)
+			},
+			query:         "UPDATE users SET name = ? WHERE id = ?",
+			parameters:    []any{"Alice", 1},
+			expectedError: "",
+			expectResult:  true,
+		},
+		{
+			name: "Prepare Error",
+			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult) {
+				mockDB.On("Prepare", "UPDATE users SET name = ? WHERE id = ?").Return(nil, errors.New("prepare error"))
+			},
+			query:         "UPDATE users SET name = ? WHERE id = ?",
+			parameters:    []any{"Alice", 1},
+			expectedError: "prepare error",
+			expectResult:  false,
+		},
+		{
+			name: "Exec Error",
+			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult) {
+				mockDB.On("Prepare", "UPDATE users SET name = ? WHERE id = ?").Return(mockStmt, nil)
+				mockStmt.On("Exec", []any{"Alice", 1}).Return(nil, errors.New("exec error"))
+				mockStmt.On("Close").Return(nil)
+			},
+			query:         "UPDATE users SET name = ? WHERE id = ?",
+			parameters:    []any{"Alice", 1},
+			expectedError: "exec error",
+			expectResult:  false,
+		},
+	}
 
-	// Test query and parameters
-	query := "SELECT * FROM users WHERE id = ?"
-	parameters := []any{1}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := new(utilmock.MockDB)
+			mockStmt := new(utilmock.MockStmt)
+			mockResult := new(MockSQLResult)
 
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", query).Return(mockStmt, nil)
-	mockStmt.On("Query", parameters).Return(mockRows, nil)
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockDB, mockStmt, mockResult)
+			}
 
-	rows, stmt, err := Query(mockDB, query, parameters)
+			// Act
+			result, err := Exec(mockDB, tt.query, tt.parameters)
 
-	assert.NoError(t, err)
-	assert.NotNil(t, rows)
-	assert.NotNil(t, stmt)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-	mockRows.AssertExpectations(t)
+			// Assert
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				if tt.expectResult {
+					assert.NotNil(t, result)
+				} else {
+					assert.Nil(t, result)
+				}
+			}
+
+			// Verify mock expectations
+			mockDB.AssertExpectations(t)
+			mockStmt.AssertExpectations(t)
+			mockResult.AssertExpectations(t)
+		})
+	}
 }
 
-// TestRowsQuery_PrepareError tests the case where there is an error during
-// query preparation.
-func TestRowsQuery_PrepareError(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
+// TestQuery tests the Query function
+func TestQuery(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupMocks func(
+			mockDB *utilmock.MockDB,
+			mockStmt *utilmock.MockStmt,
+			mockRows *utilmock.MockRows,
+		)
+		query         string
+		parameters    []any
+		expectedError string
+		expectRows    bool
+		expectStmt    bool
+	}{
+		{
+			name: "Normal Operation",
+			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockRows *utilmock.MockRows) {
+				mockDB.On("Prepare", "SELECT * FROM users WHERE id = ?").Return(mockStmt, nil)
+				mockStmt.On("Query", []any{1}).Return(mockRows, nil)
+			},
+			query:         "SELECT * FROM users WHERE id = ?",
+			parameters:    []any{1},
+			expectedError: "",
+			expectRows:    true,
+			expectStmt:    true,
+		},
+		{
+			name: "Prepare Error",
+			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockRows *utilmock.MockRows) {
+				mockDB.On("Prepare", "SELECT * FROM users WHERE id = ?").Return(nil, errors.New("prepare error"))
+			},
+			query:         "SELECT * FROM users WHERE id = ?",
+			parameters:    []any{1},
+			expectedError: "prepare error",
+			expectRows:    false,
+			expectStmt:    false,
+		},
+		{
+			name: "Query Error",
+			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockRows *utilmock.MockRows) {
+				mockDB.On("Prepare", "SELECT * FROM users WHERE id = ?").Return(mockStmt, nil)
+				mockStmt.On("Query", []any{1}).Return(nil, errors.New("query error"))
+				mockStmt.On("Close").Return(nil)
+			},
+			query:         "SELECT * FROM users WHERE id = ?",
+			parameters:    []any{1},
+			expectedError: "query error",
+			expectRows:    false,
+			expectStmt:    false,
+		},
+	}
 
-	// Test query and parameters
-	query := "SELECT * FROM users WHERE id = ?"
-	parameters := []any{1}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := new(utilmock.MockDB)
+			mockStmt := new(utilmock.MockStmt)
+			mockRows := new(utilmock.MockRows)
 
-	// Simulate an error during Prepare
-	mockDB.On("Prepare", query).Return(nil, errors.New("prepare error"))
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockDB, mockStmt, mockRows)
+			}
 
-	rows, stmt, err := Query(mockDB, query, parameters)
+			// Act
+			rows, stmt, err := Query(mockDB, tt.query, tt.parameters)
 
-	assert.Nil(t, rows)
-	assert.Nil(t, stmt)
-	assert.EqualError(t, err, "prepare error")
-	mockDB.AssertExpectations(t)
-}
+			// Assert
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, rows)
+				assert.Nil(t, stmt)
+			} else {
+				assert.NoError(t, err)
+				if tt.expectRows {
+					assert.NotNil(t, rows)
+				} else {
+					assert.Nil(t, rows)
+				}
+				if tt.expectStmt {
+					assert.NotNil(t, stmt)
+				} else {
+					assert.Nil(t, stmt)
+				}
+			}
 
-// TestRowsQuery_QueryError tests the case where there is an error during query
-// execution.
-func TestRowsQuery_QueryError(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-
-	// Test query and parameters
-	query := "SELECT * FROM users WHERE id = ?"
-	parameters := []any{1}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", query).Return(mockStmt, nil)
-	// Simulate an error during Query
-	mockStmt.On("Query", parameters).Return(nil, errors.New("query error"))
-	mockStmt.On("Close").Return(nil)
-
-	rows, stmt, err := Query(mockDB, query, parameters)
-
-	assert.Nil(t, rows)
-	assert.Nil(t, stmt)
-	assert.EqualError(t, err, "query error")
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-}
-
-// TestExecQuery_NormalOperation tests the normal operation of ExecQuery.
-func TestExecQuery_NormalOperation(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-	mockResult := new(MockSQLResult)
-
-	// Test query and parameters
-	query := "UPDATE users SET name = ? WHERE id = ?"
-	parameters := []any{"Alice", 1}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", query).Return(mockStmt, nil)
-	mockStmt.On("Exec", parameters).Return(mockResult, nil)
-	mockStmt.On("Close").Return(nil)
-
-	result, err := Exec(mockDB, query, parameters)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
-	mockResult.AssertExpectations(t)
-}
-
-// TestExecQuery_PrepareError tests the case where there is an error during
-// query preparation.
-func TestExecQuery_PrepareError(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-
-	// Test query and parameters
-	query := "UPDATE users SET name = ? WHERE id = ?"
-	parameters := []any{"Alice", 1}
-
-	// Simulate an error during Prepare
-	mockDB.On("Prepare", query).Return(nil, errors.New("prepare error"))
-
-	result, err := Exec(mockDB, query, parameters)
-
-	assert.Nil(t, result)
-	assert.EqualError(t, err, "prepare error")
-	mockDB.AssertExpectations(t)
-}
-
-// TestExecQuery_ExecError tests the case where there is an error during query
-// execution.
-func TestExecQuery_ExecError(t *testing.T) {
-	mockDB := new(utilmock.MockDB)
-	mockStmt := new(utilmock.MockStmt)
-
-	// Test query and parameters
-	query := "UPDATE users SET name = ? WHERE id = ?"
-	parameters := []any{"Alice", 1}
-
-	// Setup the mock DB expectations
-	mockDB.On("Prepare", query).Return(mockStmt, nil)
-	// Simulate an error during Exec
-	mockStmt.On("Exec", parameters).Return(nil, errors.New("exec error"))
-	mockStmt.On("Close").Return(nil)
-
-	result, err := Exec(mockDB, query, parameters)
-
-	assert.Nil(t, result)
-	assert.EqualError(t, err, "exec error")
-	mockDB.AssertExpectations(t)
-	mockStmt.AssertExpectations(t)
+			// Verify mock expectations
+			mockDB.AssertExpectations(t)
+			mockStmt.AssertExpectations(t)
+			mockRows.AssertExpectations(t)
+		})
+	}
 }

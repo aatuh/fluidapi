@@ -1,6 +1,10 @@
 package mock
 
 import (
+	"context"
+	"database/sql"
+	"time"
+
 	"github.com/pakkasys/fluidapi/database/util"
 	"github.com/stretchr/testify/mock"
 )
@@ -9,6 +13,8 @@ import (
 type MockDB struct {
 	mock.Mock
 }
+
+var _ util.DB = (*MockDB)(nil)
 
 func (m *MockDB) Prepare(query string) (util.Stmt, error) {
 	args := m.Called(query)
@@ -19,10 +25,53 @@ func (m *MockDB) Prepare(query string) (util.Stmt, error) {
 	}
 }
 
+func (m *MockDB) Ping() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockDB) SetConnMaxLifetime(d time.Duration) {
+	m.Called(d)
+}
+
+func (m *MockDB) SetConnMaxIdleTime(d time.Duration) {
+	m.Called(d)
+}
+
+func (m *MockDB) SetMaxOpenConns(n int) {
+	m.Called(n)
+}
+
+func (m *MockDB) SetMaxIdleConns(n int) {
+	m.Called(n)
+}
+
+func (m *MockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (util.Tx, error) {
+	args := m.Called(ctx, opts)
+	return args.Get(0).(util.Tx), args.Error(1)
+}
+
+func (m *MockDB) Exec(query string, args ...any) (util.Result, error) {
+	calledArgs := m.Called(query, args)
+	return calledArgs.Get(0).(util.Result), calledArgs.Error(1)
+}
+
+func (m *MockDB) Query(query string, args ...any) (util.Rows, error) {
+	calledArgs := m.Called(query, args)
+	return calledArgs.Get(0).(util.Rows), calledArgs.Error(1)
+}
+
+func (m *MockDB) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 // MockTx is a mock implementation of the Tx interface.
 type MockTx struct {
 	MockDB
 }
+
+var _ util.Tx = (*MockTx)(nil)
 
 func (m *MockTx) Commit() error {
 	return m.Called().Error(0)
@@ -36,6 +85,8 @@ func (m *MockTx) Rollback() error {
 type MockStmt struct {
 	mock.Mock
 }
+
+var _ util.Stmt = (*MockStmt)(nil)
 
 func (m *MockStmt) Close() error {
 	return m.Called().Error(0)
@@ -67,6 +118,8 @@ type MockRows struct {
 	mock.Mock
 }
 
+var _ util.Rows = (*MockRows)(nil)
+
 func (m *MockRows) Scan(dest ...any) error {
 	return m.Called(dest).Error(0)
 }
@@ -89,6 +142,8 @@ type MockRow struct {
 	mock.Mock
 }
 
+var _ util.Row = (*MockRow)(nil)
+
 func (m *MockRow) Scan(dest ...any) error {
 	return m.Called(dest).Error(0)
 }
@@ -101,6 +156,8 @@ func (m *MockRow) Err() error {
 type MockResult struct {
 	mock.Mock
 }
+
+var _ util.Result = (*MockResult)(nil)
 
 func (m *MockResult) LastInsertId() (int64, error) {
 	args := m.Called()

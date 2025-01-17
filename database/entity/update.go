@@ -23,8 +23,9 @@ func Update(
 	if len(updateFields) == 0 {
 		return 0, nil
 	}
-	res, err := update(preparer, tableName, updateFields, selectors)
-	return checkUpdateResult(res, err, errorChecker)
+	query, values := query.UpdateQuery(tableName, updateFields, selectors)
+	result, err := Exec(preparer, query, values)
+	return checkUpdateResult(result, err, errorChecker)
 }
 
 func checkUpdateResult(
@@ -42,26 +43,4 @@ func checkUpdateResult(
 	}
 
 	return rowsAffected, nil
-}
-
-func update(
-	preparer util.Preparer,
-	tableName string,
-	updateFields []query.UpdateField,
-	selectors []util.Selector,
-) (sql.Result, error) {
-	query, values := query.UpdateQuery(tableName, updateFields, selectors)
-
-	statement, err := preparer.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer statement.Close()
-
-	res, err := statement.Exec(values...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
 }
