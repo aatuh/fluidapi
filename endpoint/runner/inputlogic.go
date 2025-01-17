@@ -317,7 +317,7 @@ type ParsedGetEndpointInput struct {
 
 type ParsedUpdateEndpointInput struct {
 	DatabaseSelectors databaseutil.Selectors
-	DatabaseUpdates   []entity.Update
+	DatabaseUpdates   []entity.UpdateOptions
 	Upsert            bool
 }
 

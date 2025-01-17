@@ -505,7 +505,7 @@ func TestUpdateEndpointDefinition(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.Update,
+		databaseUpdates []entity.UpdateOptions,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -835,7 +835,7 @@ func TestParseUpdateEndpointInput_ValidInput(t *testing.T) {
 	}
 	assert.Equal(t, expectedSelectors, result.DatabaseSelectors, "ParsedUpdateEndpointInput should have the correct selectors")
 
-	expectedUpdates := []entity.Update{
+	expectedUpdates := []entity.UpdateOptions{
 		{
 			Field: "column1",
 			Value: "new_value",

@@ -185,7 +185,7 @@ func TestUpdateInvoke_Success(t *testing.T) {
 				Value:     "value1",
 			},
 		},
-		DatabaseUpdates: []entity.Update{
+		DatabaseUpdates: []entity.UpdateOptions{
 			{Field: "column1", Value: "newValue"},
 		},
 	}
@@ -197,7 +197,7 @@ func TestUpdateInvoke_Success(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.Update,
+		databaseUpdates []entity.UpdateOptions,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -231,7 +231,7 @@ func TestUpdateInvoke_ParseError(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.Update,
+		databaseUpdates []entity.UpdateOptions,
 	) (int64, error) {
 		return 1, nil
 	}
@@ -258,7 +258,7 @@ func TestUpdateInvoke_ServiceError(t *testing.T) {
 
 	parsedInput := &ParsedUpdateEndpointInput{
 		DatabaseSelectors: util.Selectors{},
-		DatabaseUpdates: []entity.Update{
+		DatabaseUpdates: []entity.UpdateOptions{
 			{Field: "column1", Value: "newValue"},
 		},
 	}
@@ -270,7 +270,7 @@ func TestUpdateInvoke_ServiceError(t *testing.T) {
 	mockUpdateServiceFunc := func(
 		ctx context.Context,
 		databaseSelectors []util.Selector,
-		databaseUpdates []entity.Update,
+		databaseUpdates []entity.UpdateOptions,
 	) (int64, error) {
 		return 0, errors.New("service error")
 	}

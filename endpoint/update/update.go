@@ -31,8 +31,8 @@ type Update struct {
 func ToDBUpdates(
 	updates []Update,
 	apiToDBFieldMap map[string]dbfield.DBField,
-) ([]entity.Update, error) {
-	var dbUpdates []entity.Update
+) ([]entity.UpdateOptions, error) {
+	var dbUpdates []entity.UpdateOptions
 
 	for i := range updates {
 		matchedUpdate := updates[i]
@@ -49,7 +49,7 @@ func ToDBUpdates(
 
 		dbUpdates = append(
 			dbUpdates,
-			entity.Update{
+			entity.UpdateOptions{
 				Field: dbField.Column,
 				Value: matchedUpdate.Value,
 			},

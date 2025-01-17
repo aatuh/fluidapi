@@ -1,4 +1,4 @@
-package entity
+package query
 
 import (
 	"github.com/pakkasys/fluidapi/database/util"

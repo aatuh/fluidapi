@@ -7,93 +7,58 @@ import (
 	"github.com/pakkasys/fluidapi/database/util"
 )
 
-// ConnectionType holds the type of the database connection.
-type ConnectionType string
-
 const (
-	TCP  ConnectionType = "tcp"  // TCP connection type
-	Unix ConnectionType = "unix" // Unix socket connection type
+	TCP  = "tcp"  // TCP connection type
+	Unix = "unix" // Unix socket connection type
 )
 
-type DBFactory func(driver string, dsn string) (util.DB, error)
+// DriverFactory is a function that creates a database driver.
+type DriverFactory func(driver string, dsn string) (util.DB, error)
 
 // Config holds the configuration for the database connection.
 type Config struct {
-	User            string         // Database user
-	Password        string         // Database password
-	Host            string         // Database host
-	Port            int            // Database port
-	Database        string         // Database name
-	SocketDirectory string         // Unix socket directory
-	SocketName      string         // Unix socket name
-	Parameters      string         // Connection parameters
-	ConnectionType  ConnectionType // Connection type
-	ConnMaxLifetime time.Duration  // Connection max lifetime
-	ConnMaxIdleTime time.Duration  // Connection max idle time
-	MaxOpenConns    int            // Max open connections
-	MaxIdleConns    int            // Max idle connections
-	DriverName      string         // Driver name
-	DSNFormat       string         // Custom DSN format
-}
-
-// NewDefaultTCPConfig returns a Config with default settings for TCP
-// connections.
-func NewDefaultTCPConfig(
-	user string,
-	password string,
-	database string,
-	driverName string,
-) *Config {
-	return &Config{
-		User:            user,
-		Password:        password,
-		Database:        database,
-		ConnectionType:  TCP,
-		Host:            "localhost",
-		Port:            3306,
-		ConnMaxLifetime: 10 * time.Minute,
-		ConnMaxIdleTime: 5 * time.Minute,
-		MaxOpenConns:    25,
-		MaxIdleConns:    5,
-		DriverName:      driverName,
-		// TODO: Check if this is generic or driver specific
-		DSNFormat: "%s:%s@tcp(%s:%d)/%s?parseTime=true&%s",
-	}
-}
-
-// NewDefaultUnixConfig returns a Config with default settings for Unix socket
-// connections.
-func NewDefaultUnixConfig(
-	user string,
-	password string,
-	database string,
-	socketDirectory string,
-	socketName string,
-	driverName string,
-) *Config {
-	return &Config{
-		User:            user,
-		Password:        password,
-		Database:        database,
-		ConnectionType:  Unix,
-		SocketDirectory: socketDirectory,
-		SocketName:      socketName,
-		ConnMaxLifetime: 10 * time.Minute,
-		ConnMaxIdleTime: 5 * time.Minute,
-		MaxOpenConns:    25,
-		MaxIdleConns:    5,
-		DriverName:      driverName,
-		DSNFormat:       "%s:%s@unix(%s/%s)/%s?parseTime=true&%s",
-	}
+	User            string        // Database user
+	Password        string        // Database password
+	Host            string        // Database host
+	Port            int           // Database port
+	Database        string        // Database name
+	SocketDirectory string        // Unix socket directory
+	SocketName      string        // Unix socket name
+	Parameters      string        // Connection parameters
+	ConnectionType  string        // Connection type
+	ConnMaxLifetime time.Duration // Connection max lifetime
+	ConnMaxIdleTime time.Duration // Connection max idle time
+	MaxOpenConns    int           // Max open connections
+	MaxIdleConns    int           // Max idle connections
+	Driver          string        // Driver name
+	DSNFormat       string        // Custom DSN format
 }
 
 // Connect establishes a connection to the database using the provided
 // configuration.
-func Connect(cfg *Config, dbFactory DBFactory) (util.DB, error) {
-	var dsn string
+//
+//   - cfg: The configuration for the database connection.
+//   - dbFactory: The factory function to create the database driver.
+func Connect(cfg *Config, dbFactory DriverFactory) (util.DB, error) {
+	dsn, err := getDSN(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := dbFactory(cfg.Driver, *dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	configureConnection(db, cfg)
+
+	return db, nil
+}
+
+func getDSN(cfg *Config) (*string, error) {
 	switch cfg.ConnectionType {
 	case TCP:
-		dsn = fmt.Sprintf(
+		dsn := fmt.Sprintf(
 			cfg.DSNFormat,
 			cfg.User,
 			cfg.Password,
@@ -102,8 +67,9 @@ func Connect(cfg *Config, dbFactory DBFactory) (util.DB, error) {
 			cfg.Database,
 			cfg.Parameters,
 		)
+		return &dsn, nil
 	case Unix:
-		dsn = fmt.Sprintf(
+		dsn := fmt.Sprintf(
 			cfg.DSNFormat,
 			cfg.User,
 			cfg.Password,
@@ -112,27 +78,16 @@ func Connect(cfg *Config, dbFactory DBFactory) (util.DB, error) {
 			cfg.Database,
 			cfg.Parameters,
 		)
+		return &dsn, nil
 	default:
 		return nil, fmt.Errorf(
 			"unsupported connection type: %s",
 			cfg.ConnectionType,
 		)
 	}
-
-	db, err := dbFactory(cfg.DriverName, dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
-	configureConnection(db, cfg)
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	return db, nil
 }
 
+// TODO: Opinionated, move elsewhere
 func configureConnection(db util.DB, cfg *Config) {
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)

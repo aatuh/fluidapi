@@ -47,7 +47,7 @@ type ToGetEndpointOutput[ServiceOutput any, EndpointOutput any] func(
 type UpdateServiceFunc func(
 	ctx context.Context,
 	databaseSelectors []util.Selector,
-	databaseUpdates []entity.Update,
+	databaseUpdates []entity.UpdateOptions,
 ) (int64, error)
 
 // ToUpdateEndpointOutput represents a function type to convert update count to
@@ -241,13 +241,11 @@ func runGetService[Output any](
 		entities, err := serviceFn(
 			ctx,
 			entity.GetOptions{
-				Options: entity.Options{
-					Selectors:   parsedEndpoint.DatabaseSelectors,
-					Orders:      parsedEndpoint.Orders,
-					Page:        parsedEndpoint.Page,
-					Joins:       joins,
-					Projections: projections,
-				},
+				Selectors:   parsedEndpoint.DatabaseSelectors,
+				Orders:      parsedEndpoint.Orders,
+				Page:        parsedEndpoint.Page,
+				Joins:       joins,
+				Projections: projections,
 			},
 		)
 		if err != nil {
