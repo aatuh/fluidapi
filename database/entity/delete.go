@@ -2,18 +2,10 @@ package entity
 
 import (
 	"database/sql"
-	"fmt"
-	"strings"
 
-	"github.com/pakkasys/fluidapi/database/internal"
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 )
-
-// DeleteOptions is the options struct for entity delete queries.
-type DeleteOptions struct {
-	Limit  int
-	Orders []util.Order
-}
 
 // Delete deletes entities from the database.
 //
@@ -25,7 +17,7 @@ func Delete(
 	preparer util.Preparer,
 	tableName string,
 	selectors []util.Selector,
-	opts *DeleteOptions,
+	opts *query.DeleteOptions,
 ) (int64, error) {
 	result, err := delete(preparer, tableName, selectors, opts)
 	if err != nil {
@@ -44,25 +36,11 @@ func delete(
 	preparer util.Preparer,
 	tableName string,
 	selectors []util.Selector,
-	opts *DeleteOptions,
+	opts *query.DeleteOptions,
 ) (sql.Result, error) {
-	whereColumns, whereValues := internal.ProcessSelectors(selectors)
+	query, whereValues := query.Delete(tableName, selectors, opts)
 
-	whereClause := ""
-	if len(whereColumns) > 0 {
-		whereClause = "WHERE " + strings.Join(whereColumns, " AND ")
-	}
-
-	builder := strings.Builder{}
-	builder.WriteString(
-		fmt.Sprintf("DELETE FROM `%s` %s", tableName, whereClause),
-	)
-
-	if opts != nil {
-		writeDeleteOptions(&builder, opts)
-	}
-
-	statement, err := preparer.Prepare(builder.String())
+	statement, err := preparer.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
@@ -74,19 +52,4 @@ func delete(
 	}
 
 	return res, nil
-}
-
-func writeDeleteOptions(
-	builder *strings.Builder,
-	opts *DeleteOptions,
-) {
-	orderClause := getOrderClauseFromOrders(opts.Orders)
-	if orderClause != "" {
-		builder.WriteString(" " + orderClause)
-	}
-
-	limit := opts.Limit
-	if limit > 0 {
-		builder.WriteString(fmt.Sprintf(" LIMIT %d", limit))
-	}
 }

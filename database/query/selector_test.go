@@ -1,4 +1,4 @@
-package internal
+package query
 
 import (
 	"reflect"
@@ -13,7 +13,7 @@ import (
 func TestProcessSelectors_NoSelectors(t *testing.T) {
 	selectors := []util.Selector{}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	// Expect no columns and no values
 	assert.Empty(t, whereColumns)
@@ -27,7 +27,7 @@ func TestProcessSelectors_SingleSelector(t *testing.T) {
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`id` = ?"}
 	expectedValues := []any{1}
@@ -44,7 +44,7 @@ func TestProcessSelectors_MultipleSelectors(t *testing.T) {
 		{Table: "user", Field: "age", Predicate: ">", Value: 18},
 	}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`id` = ?", "`user`.`age` > ?"}
 	expectedValues := []any{1, 18}
@@ -60,7 +60,7 @@ func TestProcessSelectors_WithInPredicate(t *testing.T) {
 		{Table: "user", Field: "id", Predicate: "IN", Value: []int{1, 2, 3}},
 	}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`id` IN (?,?,?)"}
 	expectedValues := []any{1, 2, 3}
@@ -76,7 +76,7 @@ func TestProcessSelectors_WithNilValue(t *testing.T) {
 		{Table: "user", Field: "deleted_at", Predicate: "=", Value: nil},
 	}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`deleted_at` IS NULL"}
 
@@ -92,7 +92,7 @@ func TestProcessSelectors_WithDifferentPredicates(t *testing.T) {
 		{Table: "user", Field: "age", Predicate: "<", Value: 30},
 	}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`name` LIKE ?", "`user`.`age` < ?"}
 	expectedValues := []any{"%Alice%", 30}
@@ -108,7 +108,7 @@ func TestProcessSelectors_EmptyTableField(t *testing.T) {
 		{Table: "", Field: "", Predicate: "=", Value: 1},
 	}
 
-	whereColumns, whereValues := ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	expectedColumns := []string{"`` = ?"}
 	expectedValues := []any{1}

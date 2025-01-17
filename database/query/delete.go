@@ -1,52 +1,29 @@
 package query
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/internal"
 	"github.com/pakkasys/fluidapi/database/util"
 )
 
-// DeleteOptions is the options struct for entity delete queries.
+// DeleteOptions is the options struct used for delete queries.
 type DeleteOptions struct {
 	Limit  int
 	Orders []util.Order
 }
 
-// Delete deletes entities from the database.
+// Delete returns the SQL query string and the values for the query.
 //
-//   - db: The database connection.
 //   - tableName: The name of the database table.
 //   - selectors: The selectors for the entities to delete.
 //   - opts: The options for the query.
 func Delete(
-	preparer util.Preparer,
 	tableName string,
 	selectors []util.Selector,
 	opts *DeleteOptions,
-) (int64, error) {
-	result, err := delete(preparer, tableName, selectors, opts)
-	if err != nil {
-		return 0, err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-
-	return rowsAffected, nil
-}
-
-func delete(
-	preparer util.Preparer,
-	tableName string,
-	selectors []util.Selector,
-	opts *DeleteOptions,
-) (sql.Result, error) {
-	whereColumns, whereValues := internal.ProcessSelectors(selectors)
+) (string, []any) {
+	whereColumns, whereValues := processSelectors(selectors)
 
 	whereClause := ""
 	if len(whereColumns) > 0 {
@@ -62,18 +39,7 @@ func delete(
 		writeDeleteOptions(&builder, opts)
 	}
 
-	statement, err := preparer.Prepare(builder.String())
-	if err != nil {
-		return nil, err
-	}
-	defer statement.Close()
-
-	res, err := statement.Exec(whereValues...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return builder.String(), whereValues
 }
 
 func writeDeleteOptions(

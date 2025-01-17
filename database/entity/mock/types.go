@@ -2,7 +2,7 @@ package mock
 
 import "github.com/stretchr/testify/mock"
 
-// MockSQLUtil is a mock implementation of the SQLUtil interface.
+// MockSQLUtil is a mock implementation of the ErrorChecker interface.
 type MockSQLUtil struct {
 	mock.Mock
 }

@@ -1,4 +1,4 @@
-package internal
+package query
 
 import (
 	"fmt"
@@ -9,15 +9,13 @@ import (
 )
 
 const (
-	predicateIn = "IN"
-	isNotClause = "IS NOT"
-	isClause    = "IS"
-	sqlNull     = "NULL"
+	in    = "IN"
+	is    = "IS"
+	isNot = "IS NOT"
+	null  = "NULL"
 )
 
-// ProcessSelectors processes selectors into where clauses and corresponding
-// parameters array.
-func ProcessSelectors(selectors []util.Selector) ([]string, []any) {
+func processSelectors(selectors []util.Selector) ([]string, []any) {
 	var whereColumns []string
 	var whereValues []any
 	for _, selector := range selectors {
@@ -29,7 +27,7 @@ func ProcessSelectors(selectors []util.Selector) ([]string, []any) {
 }
 
 func processSelector(selector util.Selector) (string, []any) {
-	if selector.Predicate == predicateIn {
+	if selector.Predicate == in {
 		return processInSelector(selector)
 	}
 	return processDefaultSelector(selector)
@@ -43,7 +41,7 @@ func processInSelector(selector util.Selector) (string, []any) {
 			"`%s`.`%s` %s (%s)",
 			selector.Table,
 			selector.Field,
-			predicateIn,
+			in,
 			placeholders,
 		)
 		return column, values
@@ -53,7 +51,7 @@ func processInSelector(selector util.Selector) (string, []any) {
 		"`%s`.`%s` %s (?)",
 		selector.Table,
 		selector.Field,
-		predicateIn,
+		in,
 	), []any{selector.Value}
 }
 
@@ -79,24 +77,24 @@ func processDefaultSelector(selector util.Selector) (string, []any) {
 
 func processNullSelector(selector util.Selector) (string, []any) {
 	if selector.Predicate == "=" {
-		return buildNullClause(selector, isClause), nil
+		return buildNullClause(selector, is), nil
 	}
 	if selector.Predicate == "!=" {
-		return buildNullClause(selector, isNotClause), nil
+		return buildNullClause(selector, isNot), nil
 	}
 	return "", nil
 }
 
 func buildNullClause(selector util.Selector, clause string) string {
 	if selector.Table == "" {
-		return fmt.Sprintf("`%s` %s %s", selector.Field, clause, sqlNull)
+		return fmt.Sprintf("`%s` %s %s", selector.Field, clause, null)
 	}
 	return fmt.Sprintf(
 		"`%s`.`%s` %s %s",
 		selector.Table,
 		selector.Field,
 		clause,
-		sqlNull,
+		null,
 	)
 }
 

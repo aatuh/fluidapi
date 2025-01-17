@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	entitymock "github.com/pakkasys/fluidapi/database/entity/mock"
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ func TestUpdateEntities_NormalOperation(t *testing.T) {
 
 	// Test table name, updates, and selectors
 	tableName := "user"
-	updates := []UpdateOptions{
+	updateFields := []query.UpdateField{
 		{Field: "name", Value: "Alice"},
 	}
 	selectors := []util.Selector{
@@ -35,7 +36,7 @@ func TestUpdateEntities_NormalOperation(t *testing.T) {
 	mockResult.On("RowsAffected").Return(int64(1), nil)
 
 	rowsAffected, err :=
-		Update(mockDB, tableName, selectors, updates, mockSQLUtil)
+		Update(mockDB, tableName, selectors, updateFields, mockSQLUtil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), rowsAffected)
@@ -51,13 +52,13 @@ func TestUpdateEntities_NoUpdates(t *testing.T) {
 
 	// Test table name and selectors
 	tableName := "user"
-	updates := []UpdateOptions{}
+	updateFields := []query.UpdateField{}
 	selectors := []util.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
 	rowsAffected, err :=
-		Update(mockDB, tableName, selectors, updates, mockSQLUtil)
+		Update(mockDB, tableName, selectors, updateFields, mockSQLUtil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), rowsAffected)
@@ -72,7 +73,7 @@ func TestUpdateEntities_Error(t *testing.T) {
 
 	// Test table name, updates, and selectors
 	tableName := "user"
-	updates := []UpdateOptions{
+	updateFields := []query.UpdateField{
 		{Field: "name", Value: "Alice"},
 	}
 	selectors := []util.Selector{
@@ -86,7 +87,7 @@ func TestUpdateEntities_Error(t *testing.T) {
 		Return(errors.New("prepare error"))
 
 	rowsAffected, err :=
-		Update(mockDB, tableName, selectors, updates, mockSQLUtil)
+		Update(mockDB, tableName, selectors, updateFields, mockSQLUtil)
 
 	assert.Equal(t, int64(0), rowsAffected)
 	assert.EqualError(t, err, "prepare error")
@@ -150,7 +151,7 @@ func TestUpdate_NormalOperation(t *testing.T) {
 
 	// Test table name, updates, and selectors
 	tableName := "user"
-	updates := []UpdateOptions{
+	updateFields := []query.UpdateField{
 		{Field: "name", Value: "Alice"},
 	}
 	selectors := []util.Selector{
@@ -162,7 +163,7 @@ func TestUpdate_NormalOperation(t *testing.T) {
 	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
 	mockStmt.On("Close").Return(nil)
 
-	result, err := update(mockDB, tableName, updates, selectors)
+	result, err := update(mockDB, tableName, updateFields, selectors)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -178,7 +179,7 @@ func TestUpdate_PrepareError(t *testing.T) {
 
 	// Test table name, updates, and selectors
 	tableName := "user"
-	updates := []UpdateOptions{
+	updateFields := []query.UpdateField{
 		{Field: "name", Value: "Alice"},
 	}
 	selectors := []util.Selector{
@@ -188,7 +189,7 @@ func TestUpdate_PrepareError(t *testing.T) {
 	// Simulate an error during Prepare
 	mockDB.On("Prepare", mock.Anything).Return(nil, errors.New("prepare error"))
 
-	result, err := update(mockDB, tableName, updates, selectors)
+	result, err := update(mockDB, tableName, updateFields, selectors)
 
 	assert.Nil(t, result)
 	assert.EqualError(t, err, "prepare error")
@@ -203,7 +204,7 @@ func TestUpdate_ExecError(t *testing.T) {
 
 	// Test table name, updates, and selectors
 	tableName := "user"
-	updates := []UpdateOptions{
+	updates := []query.UpdateField{
 		{Field: "name", Value: "Alice"},
 	}
 	selectors := []util.Selector{
@@ -231,7 +232,7 @@ func TestUpdate_EmptyUpdates(t *testing.T) {
 
 	// Test table name and selectors
 	tableName := "user"
-	updates := []UpdateOptions{}
+	updateFields := []query.UpdateField{}
 	selectors := []util.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
@@ -241,196 +242,10 @@ func TestUpdate_EmptyUpdates(t *testing.T) {
 	mockStmt.On("Exec", mock.Anything).Return(mockResult, nil)
 	mockStmt.On("Close").Return(nil)
 
-	result, err := update(mockDB, tableName, updates, selectors)
+	result, err := update(mockDB, tableName, updateFields, selectors)
 
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
 	mockDB.AssertExpectations(t)
 	mockStmt.AssertExpectations(t)
-}
-
-// TestUpdateQuery_SingleUpdate tests the case where a single update is
-// provided.
-func TestUpdateQuery_SingleUpdate(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "name", Value: "Alice"},
-	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	query, values := updateQuery("user", updates, selectors)
-
-	expectedQuery := "UPDATE `user` SET name = ? WHERE `user`.`id` = ?"
-	expectedValues := []any{"Alice", 1}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestUpdateQuery_MultipleUpdates tests the case where multiple updates are
-// provided.
-func TestUpdateQuery_MultipleUpdates(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "name", Value: "Alice"},
-		{Field: "age", Value: 30},
-	}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	query, values := updateQuery("user", updates, selectors)
-
-	expectedQuery := "UPDATE `user` SET name = ?, age = ? WHERE `user`.`id` = ?"
-	expectedValues := []any{"Alice", 30, 1}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestUpdateQuery_NoUpdates tests the case where no updates are provided.
-func TestUpdateQuery_NoUpdates(t *testing.T) {
-	updates := []UpdateOptions{}
-	selectors := []util.Selector{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-	}
-
-	query, values := updateQuery("user", updates, selectors)
-
-	expectedQuery := "UPDATE `user` SET  WHERE `user`.`id` = ?"
-	expectedValues := []any{1}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestUpdateQuery_NoSelectors tests the case where no selectors are provided.
-func TestUpdateQuery_NoSelectors(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "name", Value: "Alice"},
-	}
-
-	selectors := []util.Selector{} // No selectors
-
-	query, values := updateQuery("user", updates, selectors)
-
-	expectedQuery := "UPDATE `user` SET name = ?"
-	expectedValues := []any{"Alice"}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestUpdateQuery_EmptyFields tests the case where updates and selectors have
-// empty fields.
-func TestUpdateQuery_EmptyFields(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "", Value: "Unknown"},
-	}
-	selectors := []util.Selector{
-		{Table: "", Field: "", Predicate: "=", Value: nil},
-	}
-
-	query, values := updateQuery("user", updates, selectors)
-
-	expectedQuery := "UPDATE `user` SET  = ? WHERE `` IS NULL"
-	expectedValues := []any{"Unknown"}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestGetWhereClause_NoConditions tests the case where no conditions are
-// provided.
-func TestGetWhereClause_NoConditions(t *testing.T) {
-	whereColumns := []string{}
-
-	whereClause := getWhereClause(whereColumns)
-
-	expectedWhereClause := ""
-	assert.Equal(t, expectedWhereClause, whereClause)
-}
-
-// TestGetWhereClause_SingleCondition tests the case where a single condition is
-// provided.
-func TestGetWhereClause_SingleCondition(t *testing.T) {
-	whereColumns := []string{"`user`.`id` = ?"}
-
-	whereClause := getWhereClause(whereColumns)
-
-	expectedWhereClause := "WHERE `user`.`id` = ?"
-	assert.Equal(t, expectedWhereClause, whereClause)
-}
-
-// TestGetWhereClause_MultipleConditions tests the case where multiple
-// conditions are provided.
-func TestGetWhereClause_MultipleConditions(t *testing.T) {
-	whereColumns := []string{"`user`.`id` = ?", "`user`.`age` > 18"}
-
-	whereClause := getWhereClause(whereColumns)
-
-	expectedWhereClause := "WHERE `user`.`id` = ? AND `user`.`age` > 18"
-	assert.Equal(t, expectedWhereClause, whereClause)
-}
-
-// TestGetSetClause_SingleUpdate tests the case where a single update is
-// provided.
-func TestGetSetClause_SingleUpdate(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "name", Value: "Alice"},
-	}
-
-	setClause, values := getSetClause(updates)
-
-	expectedSetClause := "name = ?"
-	expectedValues := []any{"Alice"}
-
-	assert.Equal(t, expectedSetClause, setClause)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestGetSetClause_MultipleUpdates tests the case where multiple updates are
-// provided.
-func TestGetSetClause_MultipleUpdates(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "name", Value: "Alice"},
-		{Field: "age", Value: 30},
-	}
-
-	setClause, values := getSetClause(updates)
-
-	expectedSetClause := "name = ?, age = ?"
-	expectedValues := []any{"Alice", 30}
-
-	assert.Equal(t, expectedSetClause, setClause)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestGetSetClause_NoUpdates tests the case where no updates are provided.
-func TestGetSetClause_NoUpdates(t *testing.T) {
-	updates := []UpdateOptions{}
-
-	setClause, values := getSetClause(updates)
-
-	expectedSetClause := ""
-	expectedValues := []any{}
-
-	assert.Equal(t, expectedSetClause, setClause)
-	assert.Equal(t, expectedValues, values)
-}
-
-// TestGetSetClause_EmptyField tests the case where an update has an empty
-// field.
-func TestGetSetClause_EmptyField(t *testing.T) {
-	updates := []UpdateOptions{
-		{Field: "", Value: "Unknown"},
-	}
-
-	setClause, values := getSetClause(updates)
-
-	expectedSetClause := " = ?"
-	expectedValues := []any{"Unknown"}
-
-	assert.Equal(t, expectedSetClause, setClause)
-	assert.Equal(t, expectedValues, values)
 }

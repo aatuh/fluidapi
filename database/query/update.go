@@ -1,87 +1,31 @@
 package query
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/internal"
 	"github.com/pakkasys/fluidapi/database/util"
 )
 
-// UpdateOptions is the options struct for entity update queries.
-type UpdateOptions struct {
+// UpdateField is the options struct used for update queries.
+type UpdateField struct {
 	Field string
 	Value any
 }
 
-// Update updates entities in the database.
+// UpdateQuery returns the SQL query and values for an update query.
 //
-//   - db: The database connection to use.
 //   - tableName: The name of the database table.
-//   - selectors: The selectors of the entities to update.
-//   - updates: The updates to apply to the entities.
-func Update(
-	preparer util.Preparer,
+//   - updateFields: The fields to update.
+//   - selectors: The selectors for the entities to update.
+func UpdateQuery(
 	tableName string,
-	selectors []util.Selector,
-	updates []UpdateOptions,
-	sqlUtil ErrorChecker,
-) (int64, error) {
-	if len(updates) == 0 {
-		return 0, nil
-	}
-	res, err := update(preparer, tableName, updates, selectors)
-	return checkUpdateResult(res, err, sqlUtil)
-}
-
-func checkUpdateResult(
-	result sql.Result,
-	err error,
-	sqlUtil ErrorChecker,
-) (int64, error) {
-	if err != nil {
-		return 0, sqlUtil.Check(err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-
-	return rowsAffected, nil
-}
-
-func update(
-	preparer util.Preparer,
-	tableName string,
-	updates []UpdateOptions,
-	selectors []util.Selector,
-) (sql.Result, error) {
-	query, values := updateQuery(tableName, updates, selectors)
-
-	statement, err := preparer.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer statement.Close()
-
-	res, err := statement.Exec(values...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func updateQuery(
-	tableName string,
-	updates []UpdateOptions,
+	updateFields []UpdateField,
 	selectors []util.Selector,
 ) (string, []any) {
-	whereColumns, whereValues := internal.ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
-	setClause, values := getSetClause(updates)
+	setClause, values := getSetClause(updateFields)
 	values = append(values, whereValues...)
 
 	builder := strings.Builder{}
@@ -105,7 +49,7 @@ func getWhereClause(whereColumns []string) string {
 	return whereClause
 }
 
-func getSetClause(updates []UpdateOptions) (string, []any) {
+func getSetClause(updates []UpdateField) (string, []any) {
 	setClauseParts := make([]string, len(updates))
 	values := make([]any, len(updates))
 

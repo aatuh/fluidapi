@@ -1,17 +1,9 @@
 package entity
 
 import (
-	"fmt"
-	"strings"
-
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 )
-
-// DBOptionsCount is the options struct for entity count queries.
-type DBOptionsCount struct {
-	Selectors []util.Selector
-	Joins     []util.Join
-}
 
 // Count counts the number of entities in the database.
 //
@@ -21,9 +13,9 @@ type DBOptionsCount struct {
 func Count(
 	preparer util.Preparer,
 	tableName string,
-	dbOptions *DBOptionsCount,
+	dbOptions *query.CountOptions,
 ) (int, error) {
-	query, whereValues := buildBaseCountQuery(tableName, dbOptions)
+	query, whereValues := query.Count(tableName, dbOptions)
 
 	statement, err := preparer.Prepare(query)
 	if err != nil {
@@ -37,20 +29,4 @@ func Count(
 	}
 
 	return count, nil
-}
-
-func buildBaseCountQuery(
-	tableName string,
-	dbOptions *DBOptionsCount,
-) (string, []any) {
-	whereClause, whereValues := whereClause(dbOptions.Selectors)
-
-	query := strings.Trim(fmt.Sprintf(
-		"SELECT COUNT(*) FROM `%s` %s %s",
-		tableName,
-		joinClause(dbOptions.Joins),
-		whereClause,
-	), " ")
-
-	return query, whereValues
 }

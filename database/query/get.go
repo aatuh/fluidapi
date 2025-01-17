@@ -1,19 +1,14 @@
 package query
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/internal"
 	util "github.com/pakkasys/fluidapi/database/util"
 	"github.com/pakkasys/fluidapi/endpoint/page"
 )
 
-type RowScanner[T any] func(row util.Row, entity *T) error
-type RowScannerMultiple[T any] func(rows util.Rows, entity *T) error
-
-// GetOptions is the options struct used for queries.
+// GetOptions is the options struct used for get queries.
 type GetOptions struct {
 	Selectors   []util.Selector
 	Orders      []util.Order
@@ -23,127 +18,36 @@ type GetOptions struct {
 	Lock        bool
 }
 
-func Get[T any](
-	tableName string,
-	rowScanner RowScanner[T],
-	preparer util.Preparer,
-	dbOptions *GetOptions,
-) (*T, error) {
-	query, whereValues := buildBaseGetQuery(tableName, dbOptions)
+// Get returns a get query.
+//
+//   - tableName: The name of the database table.
+//   - dbOptions: The options for the query.
+func Get(tableName string, dbOptions *GetOptions) (string, []any) {
+	whereClause, whereValues := whereClause(dbOptions.Selectors)
 
-	return GetWithQuery(
-		tableName,
-		rowScanner,
-		preparer,
-		query,
-		whereValues,
-	)
-}
-
-func GetWithQuery[T any](
-	tableName string,
-	rowScanner RowScanner[T],
-	preparer util.Preparer,
-	query string,
-	params []any,
-) (*T, error) {
-	entity, err := querySingle(
-		preparer,
-		query,
-		params,
-		rowScanner,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+	builder := strings.Builder{}
+	builder.WriteString(fmt.Sprintf(
+		"SELECT %s",
+		strings.Join(projectionsToStrings(dbOptions.Projections), ","),
+	))
+	builder.WriteString(fmt.Sprintf(" FROM `%s`", tableName))
+	if len(dbOptions.Joins) != 0 {
+		builder.WriteString(" " + joinClause(dbOptions.Joins))
+	}
+	if whereClause != "" {
+		builder.WriteString(" " + whereClause)
+	}
+	if len(dbOptions.Orders) != 0 {
+		builder.WriteString(" " + getOrderClauseFromOrders(dbOptions.Orders))
+	}
+	if dbOptions.Page != nil {
+		builder.WriteString(" " + getLimitOffsetClauseFromPage(dbOptions.Page))
+	}
+	if dbOptions.Lock {
+		builder.WriteString(" FOR UPDATE")
 	}
 
-	return entity, nil
-}
-
-func GetMany[T any](
-	tableName string,
-	rowScannerMultiple RowScannerMultiple[T],
-	preparer util.Preparer,
-	dbOptions *GetOptions,
-) ([]T, error) {
-	query, whereValues := buildBaseGetQuery(tableName, dbOptions)
-
-	ent, e := GetManyWithQuery(
-		tableName,
-		rowScannerMultiple,
-		preparer,
-		query,
-		whereValues,
-	)
-
-	return ent, e
-}
-
-func GetManyWithQuery[T any](
-	tableName string,
-	rowScannerMultiple RowScannerMultiple[T],
-	preparer util.Preparer,
-	query string,
-	params []any,
-) ([]T, error) {
-	entities, err := queryMultiple(preparer, query, params, rowScannerMultiple)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return []T{}, nil
-		}
-		return nil, err
-	}
-	return entities, nil
-}
-
-func queryMultiple[T any](
-	preparer util.Preparer,
-	query string,
-	params []any,
-	rowScannerMultiple RowScannerMultiple[T],
-) ([]T, error) {
-	rows, statement, err := Query(preparer, query, params)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	defer statement.Close()
-
-	entities, err := rowsToEntities(rows, rowScannerMultiple)
-	if err != nil {
-		return nil, err
-	}
-
-	return entities, nil
-}
-
-func querySingle[T any](
-	preparer util.Preparer,
-	query string,
-	params []any,
-	rowScanner RowScanner[T],
-) (*T, error) {
-	statement, err := preparer.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer statement.Close()
-
-	var entity T
-
-	row := statement.QueryRow(params...)
-	err = rowScanner(row, &entity)
-	if err != nil {
-		return nil, err
-	}
-	if err := row.Err(); err != nil {
-		return nil, err
-	}
-
-	return &entity, nil
+	return builder.String(), whereValues
 }
 
 func projectionsToStrings(projections []util.Projection) []string {
@@ -176,7 +80,7 @@ func joinClause(joins []util.Join) string {
 }
 
 func whereClause(selectors []util.Selector) (string, []any) {
-	whereColumns, whereValues := internal.ProcessSelectors(selectors)
+	whereColumns, whereValues := processSelectors(selectors)
 
 	var whereClause string
 	if len(whereColumns) > 0 {
@@ -184,37 +88,6 @@ func whereClause(selectors []util.Selector) (string, []any) {
 	}
 
 	return strings.Trim(whereClause, " "), whereValues
-}
-
-func buildBaseGetQuery(
-	tableName string,
-	dbOptions *GetOptions,
-) (string, []any) {
-	whereClause, whereValues := whereClause(dbOptions.Selectors)
-
-	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf(
-		"SELECT %s",
-		strings.Join(projectionsToStrings(dbOptions.Projections), ","),
-	))
-	builder.WriteString(fmt.Sprintf(" FROM `%s`", tableName))
-	if len(dbOptions.Joins) != 0 {
-		builder.WriteString(" " + joinClause(dbOptions.Joins))
-	}
-	if whereClause != "" {
-		builder.WriteString(" " + whereClause)
-	}
-	if len(dbOptions.Orders) != 0 {
-		builder.WriteString(" " + getOrderClauseFromOrders(dbOptions.Orders))
-	}
-	if dbOptions.Page != nil {
-		builder.WriteString(" " + getLimitOffsetClauseFromPage(dbOptions.Page))
-	}
-	if dbOptions.Lock {
-		builder.WriteString(" FOR UPDATE")
-	}
-
-	return builder.String(), whereValues
 }
 
 func getLimitOffsetClauseFromPage(page *page.Page) string {
@@ -253,28 +126,4 @@ func getOrderClauseFromOrders(orders []util.Order) string {
 	}
 
 	return strings.TrimSuffix(orderClause, ",")
-}
-
-func rowsToEntities[T any](
-	rows util.Rows,
-	rowScannerMultiple RowScannerMultiple[T],
-) ([]T, error) {
-	if rowScannerMultiple == nil {
-		return nil, fmt.Errorf("must provide rowScannerMultiple")
-	}
-
-	var entities []T
-	for rows.Next() {
-		var entity T
-		err := rowScannerMultiple(rows, &entity)
-		if err != nil {
-			return nil, err
-		}
-		entities = append(entities, entity)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return entities, nil
 }

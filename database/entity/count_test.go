@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/query"
 	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,7 +24,7 @@ func TestCountEntities_NormalOperation(t *testing.T) {
 
 	// Example table name and dbOptions
 	tableName := "test_table"
-	dbOptions := &DBOptionsCount{}
+	dbOptions := &query.CountOptions{}
 
 	count, err := Count(mockDB, tableName, dbOptions)
 
@@ -47,7 +47,7 @@ func TestCountEntities_PrepareError(t *testing.T) {
 
 	// Example table name and dbOptions
 	tableName := "test_table"
-	dbOptions := &DBOptionsCount{}
+	dbOptions := &query.CountOptions{}
 
 	count, err := Count(mockDB, tableName, dbOptions)
 
@@ -73,7 +73,7 @@ func TestCountEntities_QueryRowError(t *testing.T) {
 
 	// Example table name and dbOptions
 	tableName := "test_table"
-	dbOptions := &DBOptionsCount{}
+	dbOptions := &query.CountOptions{}
 
 	count, err := Count(mockDB, tableName, dbOptions)
 
@@ -84,99 +84,4 @@ func TestCountEntities_QueryRowError(t *testing.T) {
 	mockDB.AssertExpectations(t)
 	mockStmt.AssertExpectations(t)
 	mockRow.AssertExpectations(t)
-}
-
-// TestBuildBaseCountQuery_NoSelectorsNoJoins tests buildBaseCountQuery with no
-// selectors or joins.
-func TestBuildBaseCountQuery_NoSelectorsNoJoins(t *testing.T) {
-	tableName := "test_table"
-	dbOptions := &DBOptionsCount{}
-
-	query, whereValues := buildBaseCountQuery(tableName, dbOptions)
-
-	expectedQuery := "SELECT COUNT(*) FROM `test_table`"
-	expectedValues := []any{}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.ElementsMatch(t, expectedValues, whereValues)
-}
-
-// TestBuildBaseCountQuery_WithSelectors tests buildBaseCountQuery only
-// selectors.
-func TestBuildBaseCountQuery_WithSelectors(t *testing.T) {
-	tableName := "test_table"
-	dbOptions := &DBOptionsCount{
-		Selectors: []util.Selector{
-			{Table: "test_table", Field: "id", Predicate: "=", Value: 1},
-		},
-	}
-
-	query, whereValues := buildBaseCountQuery(tableName, dbOptions)
-
-	expectedQuery := "SELECT COUNT(*) FROM `test_table`  WHERE `test_table`.`id` = ?"
-	expectedValues := []any{1}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.ElementsMatch(t, expectedValues, whereValues)
-}
-
-// TestBuildBaseCountQuery_WithJoins tests buildBaseCountQuery with joins only.
-func TestBuildBaseCountQuery_WithJoins(t *testing.T) {
-	tableName := "test_table"
-	dbOptions := &DBOptionsCount{
-		Joins: []util.Join{
-			{
-				Type:  util.JoinTypeInner,
-				Table: "other_table",
-				OnLeft: util.ColumSelector{
-					Table:  "test_table",
-					Column: "id",
-				},
-				OnRight: util.ColumSelector{
-					Table:  "other_table",
-					Column: "ref_id",
-				},
-			},
-		},
-	}
-	query, whereValues := buildBaseCountQuery(tableName, dbOptions)
-
-	expectedQuery := "SELECT COUNT(*) FROM `test_table` INNER JOIN `other_table` ON `test_table`.`id` = `other_table`.`ref_id`"
-	expectedValues := []any{}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.ElementsMatch(t, expectedValues, whereValues)
-}
-
-// TestBuildBaseCountQuery_WithSelectorsAndJoins tests buildBaseCountQuery with
-// both selectors and joins.
-func TestBuildBaseCountQuery_WithSelectorsAndJoins(t *testing.T) {
-	tableName := "test_table"
-	dbOptions := &DBOptionsCount{
-		Selectors: []util.Selector{
-			{Table: "test_table", Field: "id", Predicate: "=", Value: 1},
-		},
-		Joins: []util.Join{
-			{
-				Type:  util.JoinTypeInner,
-				Table: "other_table",
-				OnLeft: util.ColumSelector{
-					Table:  "test_table",
-					Column: "id",
-				},
-				OnRight: util.ColumSelector{
-					Table:  "other_table",
-					Column: "ref_id",
-				},
-			},
-		},
-	}
-
-	query, whereValues := buildBaseCountQuery(tableName, dbOptions)
-
-	expectedQuery := "SELECT COUNT(*) FROM `test_table` INNER JOIN `other_table` ON `test_table`.`id` = `other_table`.`ref_id` WHERE `test_table`.`id` = ?"
-	expectedValues := []any{1}
-
-	assert.Equal(t, expectedQuery, query)
-	assert.ElementsMatch(t, expectedValues, whereValues)
 }

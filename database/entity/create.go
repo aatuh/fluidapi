@@ -2,14 +2,10 @@ package entity
 
 import (
 	"database/sql"
-	"fmt"
-	"strings"
 
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 )
-
-// Inserter is a function used to insert an entity into the database.
-type Inserter[T any] func(entity T) (columns []string, values []any)
 
 // Create creates an entity in the database.
 //
@@ -21,11 +17,11 @@ func Create[T any](
 	entity *T,
 	preparer util.Preparer,
 	tableName string,
-	inserter Inserter[*T],
-	sqlUtil ErrorChecker,
+	inserter query.InsertedValues[*T],
+	errorChecker ErrorChecker,
 ) (int64, error) {
 	res, err := insert(preparer, entity, tableName, inserter)
-	return checkInsertResult(res, err, sqlUtil)
+	return checkInsertResult(res, err, errorChecker)
 }
 
 // CreateMany creates entities in the database.
@@ -38,8 +34,8 @@ func CreateMany[T any](
 	entities []*T,
 	preparer util.Preparer,
 	tableName string,
-	inserter Inserter[*T],
-	sqlUtil ErrorChecker,
+	inserter query.InsertedValues[*T],
+	errorChecker ErrorChecker,
 ) (int64, error) {
 	if len(entities) == 0 {
 		return 0, nil
@@ -50,16 +46,16 @@ func CreateMany[T any](
 		tableName,
 		inserter,
 	)
-	return checkInsertResult(res, err, sqlUtil)
+	return checkInsertResult(res, err, errorChecker)
 }
 
 func checkInsertResult(
 	result sql.Result,
 	err error,
-	sqlUtil ErrorChecker,
+	errorChecker ErrorChecker,
 ) (int64, error) {
 	if err != nil {
-		return 0, sqlUtil.Check(err)
+		return 0, errorChecker.Check(err)
 	}
 
 	id, err := result.LastInsertId()
@@ -70,45 +66,13 @@ func checkInsertResult(
 	return id, err
 }
 
-func getInsertQueryColumnNames(columns []string) string {
-	wrappedColumns := make([]string, len(columns))
-	for i, column := range columns {
-		wrappedColumns[i] = "`" + column + "`"
-	}
-	columnNames := strings.Join(wrappedColumns, ", ")
-	return columnNames
-}
-
-func insertQuery[T any](
-	entity *T,
-	tableName string,
-	inserter Inserter[*T],
-) (string, []any) {
-	columns, values := inserter(entity)
-	columnNames := getInsertQueryColumnNames(columns)
-
-	valuePlaceholders := strings.TrimSuffix(
-		strings.Repeat("?, ", len(values)),
-		", ",
-	)
-
-	query := fmt.Sprintf(
-		"INSERT INTO `%s` (%s) VALUES (%s)",
-		tableName,
-		columnNames,
-		valuePlaceholders,
-	)
-
-	return query, values
-}
-
 func insert[T any](
 	preparer util.Preparer,
 	entity *T,
 	tableName string,
-	inserter Inserter[*T],
+	inserter query.InsertedValues[*T],
 ) (sql.Result, error) {
-	query, values := insertQuery(entity, tableName, inserter)
+	query, values := query.Insert(entity, tableName, inserter)
 
 	statement, err := preparer.Prepare(query)
 	if err != nil {
@@ -124,47 +88,13 @@ func insert[T any](
 	return result, nil
 }
 
-func insertManyQuery[T any](
-	entities []*T,
-	tableName string,
-	inserter Inserter[*T],
-) (string, []any) {
-	if len(entities) == 0 {
-		return "", nil
-	}
-
-	columns, _ := inserter(entities[0])
-	columnNames := getInsertQueryColumnNames(columns)
-
-	var allValues []any
-	valuePlaceholders := make([]string, len(entities))
-	for i, entity := range entities {
-		_, values := inserter(entity)
-		placeholders := make([]string, len(values))
-		for j := range values {
-			placeholders[j] = "?"
-		}
-		valuePlaceholders[i] = "(" + strings.Join(placeholders, ", ") + ")"
-		allValues = append(allValues, values...)
-	}
-
-	query := fmt.Sprintf(
-		"INSERT INTO `%s` (%s) VALUES %s",
-		tableName,
-		columnNames,
-		strings.Join(valuePlaceholders, ", "),
-	)
-
-	return query, allValues
-}
-
 func insertMany[T any](
 	preparer util.Preparer,
 	entities []*T,
 	tableName string,
-	inserter Inserter[*T],
+	inserter query.InsertedValues[*T],
 ) (sql.Result, error) {
-	query, values := insertManyQuery(entities, tableName, inserter)
+	query, values := query.InsertMany(entities, tableName, inserter)
 
 	statement, err := preparer.Prepare(query)
 	if err != nil {

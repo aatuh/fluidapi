@@ -2,9 +2,9 @@ package entity
 
 import (
 	"errors"
-	"strings"
 	"testing"
 
+	"github.com/pakkasys/fluidapi/database/query"
 	"github.com/pakkasys/fluidapi/database/util"
 	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +22,7 @@ func TestDeleteEntities_NormalOperation(t *testing.T) {
 	selectors := []util.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit:  5,
 		Orders: nil,
 	}
@@ -51,7 +51,7 @@ func TestDeleteEntities_DeleteError(t *testing.T) {
 	selectors := []util.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit:  5,
 		Orders: nil,
 	}
@@ -76,7 +76,7 @@ func TestDeleteEntities_RowsAffectedError(t *testing.T) {
 	selectors := []util.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit:  5,
 		Orders: nil,
 	}
@@ -107,7 +107,7 @@ func TestDelete_NormalOperation(t *testing.T) {
 	selectors := []util.Selector{
 		{Field: "id", Predicate: "=", Value: 1},
 	}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit: 10,
 		Orders: []util.Order{
 			{Table: "user", Field: "name", Direction: "ASC"},
@@ -136,7 +136,7 @@ func TestDelete_NoSelectors(t *testing.T) {
 
 	// Empty selectors and options
 	selectors := []util.Selector{}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit:  0,
 		Orders: nil,
 	}
@@ -164,7 +164,7 @@ func TestDelete_PrepareError(t *testing.T) {
 	selectors := []util.Selector{
 		{Field: "id", Predicate: "=", Value: 1},
 	}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit:  0,
 		Orders: nil,
 	}
@@ -188,7 +188,7 @@ func TestDelete_ExecError(t *testing.T) {
 	selectors := []util.Selector{
 		{Field: "id", Predicate: "=", Value: 1},
 	}
-	opts := DeleteOptions{
+	opts := query.DeleteOptions{
 		Limit:  0,
 		Orders: nil,
 	}
@@ -204,79 +204,4 @@ func TestDelete_ExecError(t *testing.T) {
 	assert.EqualError(t, err, "exec error")
 	mockDB.AssertExpectations(t)
 	mockStmt.AssertExpectations(t)
-}
-
-// TestWriteDeleteOptions_WithLimitAndOrders tests writeDeleteOptions with both
-// limit and orders.
-func TestWriteDeleteOptions_WithLimitAndOrders(t *testing.T) {
-	// Create a DeleteOptions with a limit and orders
-	orders := []util.Order{
-		{Table: "user", Field: "name", Direction: "ASC"},
-		{Table: "user", Field: "age", Direction: "DESC"},
-	}
-	opts := DeleteOptions{Limit: 10, Orders: orders}
-
-	// Create a string builder for the SQL query
-	builder := strings.Builder{}
-	builder.WriteString("DELETE FROM `user` WHERE id = 1")
-
-	writeDeleteOptions(&builder, &opts)
-
-	expectedSQL := "DELETE FROM `user` WHERE id = 1 ORDER BY `user`.`name` ASC, `user`.`age` DESC LIMIT 10"
-
-	assert.Equal(t, expectedSQL, builder.String())
-}
-
-// TestWriteDeleteOptions_WithOnlyOrders tests writeDeleteOptions with only
-// orders and no limit.
-func TestWriteDeleteOptions_WithOnlyOrders(t *testing.T) {
-	// Create a DeleteOptions with only orders
-	orders := []util.Order{
-		{Table: "user", Field: "name", Direction: "ASC"},
-	}
-	opts := DeleteOptions{Limit: 0, Orders: orders}
-
-	// Create a string builder for the SQL query
-	builder := strings.Builder{}
-	builder.WriteString("DELETE FROM `user` WHERE id = 1")
-
-	writeDeleteOptions(&builder, &opts)
-
-	expectedSQL := "DELETE FROM `user` WHERE id = 1 ORDER BY `user`.`name` ASC"
-
-	assert.Equal(t, expectedSQL, builder.String())
-}
-
-// TestWriteDeleteOptions_WithOnlyLimit tests writeDeleteOptions with only a
-// limit and no orders.
-func TestWriteDeleteOptions_WithOnlyLimit(t *testing.T) {
-	// Create a DeleteOptions with only a limit
-	opts := DeleteOptions{Limit: 5, Orders: nil}
-
-	// Create a string builder for the SQL query
-	builder := strings.Builder{}
-	builder.WriteString("DELETE FROM `user` WHERE id = 1")
-
-	writeDeleteOptions(&builder, &opts)
-
-	expectedSQL := "DELETE FROM `user` WHERE id = 1 LIMIT 5"
-
-	assert.Equal(t, expectedSQL, builder.String())
-}
-
-// TestWriteDeleteOptions_WithNoOptions tests writeDeleteOptions with no limit
-// and no orders.
-func TestWriteDeleteOptions_WithNoOptions(t *testing.T) {
-	// Create an empty DeleteOptions with no limit and no orders
-	opts := DeleteOptions{Limit: 0, Orders: nil}
-
-	// Create a string builder for the SQL query
-	builder := strings.Builder{}
-	builder.WriteString("DELETE FROM `user` WHERE id = 1")
-
-	writeDeleteOptions(&builder, &opts)
-
-	expectedSQL := "DELETE FROM `user` WHERE id = 1"
-
-	assert.Equal(t, expectedSQL, builder.String())
 }
