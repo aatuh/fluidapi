@@ -128,7 +128,7 @@ func TestNewDefaultTCPConfig(t *testing.T) {
 	assert.Equal(t, password, cfg.Password)
 	assert.Equal(t, database, cfg.Database)
 	assert.Equal(t, driverName, cfg.DriverName)
-	assert.Equal(t, ConnectionTCP, cfg.ConnectionType)
+	assert.Equal(t, TCP, cfg.ConnectionType)
 }
 
 // TestNewDefaultUnixConfig tests default Unix socket configuration creation.
@@ -155,7 +155,7 @@ func TestNewDefaultUnixConfig(t *testing.T) {
 	assert.Equal(t, socketDirectory, cfg.SocketDirectory)
 	assert.Equal(t, socketName, cfg.SocketName)
 	assert.Equal(t, driverName, cfg.DriverName)
-	assert.Equal(t, ConnectionUnix, cfg.ConnectionType)
+	assert.Equal(t, Unix, cfg.ConnectionType)
 }
 
 // TestConnect_Success tests the successful connection scenario.

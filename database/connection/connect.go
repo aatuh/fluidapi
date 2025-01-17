@@ -11,8 +11,8 @@ import (
 type ConnectionType string
 
 const (
-	ConnectionTCP  ConnectionType = "tcp"  // TCP connection type
-	ConnectionUnix ConnectionType = "unix" // Unix socket connection type
+	TCP  ConnectionType = "tcp"  // TCP connection type
+	Unix ConnectionType = "unix" // Unix socket connection type
 )
 
 type DBFactory func(driver string, dsn string) (util.DB, error)
@@ -48,7 +48,7 @@ func NewDefaultTCPConfig(
 		User:            user,
 		Password:        password,
 		Database:        database,
-		ConnectionType:  ConnectionTCP,
+		ConnectionType:  TCP,
 		Host:            "localhost",
 		Port:            3306,
 		ConnMaxLifetime: 10 * time.Minute,
@@ -75,7 +75,7 @@ func NewDefaultUnixConfig(
 		User:            user,
 		Password:        password,
 		Database:        database,
-		ConnectionType:  ConnectionUnix,
+		ConnectionType:  Unix,
 		SocketDirectory: socketDirectory,
 		SocketName:      socketName,
 		ConnMaxLifetime: 10 * time.Minute,
@@ -92,7 +92,7 @@ func NewDefaultUnixConfig(
 func Connect(cfg *Config, dbFactory DBFactory) (util.DB, error) {
 	var dsn string
 	switch cfg.ConnectionType {
-	case ConnectionTCP:
+	case TCP:
 		dsn = fmt.Sprintf(
 			cfg.DSNFormat,
 			cfg.User,
@@ -102,7 +102,7 @@ func Connect(cfg *Config, dbFactory DBFactory) (util.DB, error) {
 			cfg.Database,
 			cfg.Parameters,
 		)
-	case ConnectionUnix:
+	case Unix:
 		dsn = fmt.Sprintf(
 			cfg.DSNFormat,
 			cfg.User,
@@ -133,7 +133,6 @@ func Connect(cfg *Config, dbFactory DBFactory) (util.DB, error) {
 	return db, nil
 }
 
-// configureConnection configures the connection pool parameters.
 func configureConnection(db util.DB, cfg *Config) {
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)

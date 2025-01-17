@@ -40,9 +40,9 @@ func (m *MockServer) Shutdown(ctx context.Context) error {
 
 func startTestHTTPServer(
 	port int,
-	httpEndpoints []api.Endpoint,
+	httpEndpoints []Endpoint,
 ) (shutdownFunc func()) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	// Start the HTTP server in a goroutine
 	go func() {
@@ -66,7 +66,7 @@ func startTestHTTPServer(
 
 // Test case to simulate a graceful shutdown
 func TestHTTPServer_Lifecycle(t *testing.T) {
-	httpEndpoints := []api.Endpoint{{URL: "/test", Method: "GET"}}
+	httpEndpoints := []Endpoint{{URL: "/test", Method: "GET"}}
 
 	shutdown := startTestHTTPServer(8080, httpEndpoints)
 	defer shutdown()
@@ -83,7 +83,7 @@ func TestHTTPServer_Lifecycle(t *testing.T) {
 // Test case for calling an unregistered (not found) endpoint
 func TestHTTPServer_CallNotFoundEndpoint(t *testing.T) {
 	// Define endpoints (no /notfound registered)
-	httpEndpoints := []api.Endpoint{
+	httpEndpoints := []Endpoint{
 		{
 			URL:    "/test",
 			Method: "GET",
@@ -117,7 +117,7 @@ func TestHTTPServer_CallNotFoundEndpoint(t *testing.T) {
 // Test case for calling an endpoint with the wrong method
 func TestHTTPServer_CallEndpointWithWrongMethod(t *testing.T) {
 	// Define endpoints
-	httpEndpoints := []api.Endpoint{
+	httpEndpoints := []Endpoint{
 		{
 			URL:    "/test",
 			Method: "GET",
@@ -150,10 +150,10 @@ func TestHTTPServer_CallEndpointWithWrongMethod(t *testing.T) {
 
 // Test case for calling a registered endpoint
 func TestHTTPServer_CallRegisteredEndpoint(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	// Define endpoints
-	httpEndpoints := []api.Endpoint{
+	httpEndpoints := []Endpoint{
 		{
 			URL:    "/test",
 			Method: "GET",
@@ -197,11 +197,11 @@ func TestHTTPServer_CallRegisteredEndpoint(t *testing.T) {
 
 // Test case for DefaultHTTPServer function
 func TestDefaultHTTPServer(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	// Define test parameters
 	port := 8080
-	httpEndpoints := []api.Endpoint{
+	httpEndpoints := []Endpoint{
 		{
 			URL:    "/test",
 			Method: "GET",
@@ -330,7 +330,7 @@ func TestStartServer_ServerShutdownError(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 func TestSetupMux(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	// Define test middleware and endpoints
 	getMiddleware := func(next http.Handler) http.Handler {
@@ -346,7 +346,7 @@ func TestSetupMux(t *testing.T) {
 			assert.Nil(t, err)
 		})
 	}
-	endpoints := []api.Endpoint{
+	endpoints := []Endpoint{
 		{
 			URL:         "/test",
 			Method:      "GET",
@@ -396,7 +396,7 @@ func TestSetupMux(t *testing.T) {
 
 // TestCreateEndpointHandler tests the createEndpointHandler function.
 func TestCreateEndpointHandler(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	// Mock handlers for different HTTP methods
 	getHandler := http.HandlerFunc(
@@ -457,7 +457,7 @@ func TestCreateEndpointHandler(t *testing.T) {
 
 // TestCreateNotFoundHandler tests the createNotFoundHandler function.
 func TestCreateNotFoundHandler(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	// Create an instance of the not found handler
 	handler := createNotFoundHandler(mockEmitter)
@@ -506,7 +506,7 @@ func TestMapKeys(t *testing.T) {
 
 // TestMultiplexEndpoints tests the multiplexEndpoints function.
 func TestMultiplexEndpoints(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	testMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -516,7 +516,7 @@ func TestMultiplexEndpoints(t *testing.T) {
 	}
 
 	// Create dummy endpoints with a middleware
-	endpoints := []api.Endpoint{
+	endpoints := []Endpoint{
 		{
 			URL:    "/test",
 			Method: "GET",
@@ -539,7 +539,7 @@ func TestMultiplexEndpoints(t *testing.T) {
 
 // TestServerPanicHandler tests the serverPanicHandler function.
 func TestServerPanicHandler(t *testing.T) {
-	mockEmitter := events.NewDefaultEventEmitter()
+	mockEmitter := events.NewEventEmitter()
 
 	var errorEvents []string = []string{}
 	mockEmitter.RegisterListener(Error, func(event events.Event) {

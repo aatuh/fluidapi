@@ -15,6 +15,8 @@ import (
 	"github.com/pakkasys/fluidapi/core/events"
 )
 
+// TODO: Better event types
+// TODO: Use event on every log message instead
 // Define event types.
 const (
 	Error = "error"
@@ -29,30 +31,29 @@ type IServer interface {
 
 type multiplexedEndpoints map[string]map[string]http.Handler
 
-// HTTPServer sets up an HTTP server with the specified port and endpoints,
-// using optional logging functions for requests and errors. If no custom server
-// options are provided, it creates a default http.Server. The server listens
-// for OS interrupt signals to gracefully shut down.
-//
-//   - server: Server implementation to use.
-func HTTPServer(server IServer) error {
-	return startServer(make(chan os.Signal, 1), server)
-}
-
 // DefaultHTTPServer returns the default HTTP server implementation.
 //
 //   - port: Port for the HTTP server.
 //   - httpEndpoints: Endpoints to register.
-//   - eventEmitter: Optional event emitter for logging.
+//   - eventEmitter: Optional event emitter.
 func DefaultHTTPServer(
 	port int,
-	httpEndpoints []api.Endpoint,
-	eventEmitter events.EventEmitter,
+	httpEndpoints []Endpoint,
+	eventEmitter *events.EventEmitter,
 ) IServer {
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: setupMux(httpEndpoints, eventEmitter),
 	}
+}
+
+// HTTPServer sets up an HTTP server with the specified port and endpoints,
+// using optional event emitter. The server listens for OS interrupt signals to
+// gracefully shut down.
+//
+//   - server: Server implementation to use.
+func HTTPServer(server IServer) error {
+	return startServer(make(chan os.Signal, 1), server)
 }
 
 func startServer(stopChan chan os.Signal, server IServer) error {
@@ -91,8 +92,8 @@ func startServer(stopChan chan os.Signal, server IServer) error {
 }
 
 func setupMux(
-	httpEndpoints []api.Endpoint,
-	eventEmitter events.EventEmitter,
+	httpEndpoints []Endpoint,
+	eventEmitter *events.EventEmitter,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
 	endpoints := multiplexEndpoints(httpEndpoints, eventEmitter)
@@ -116,7 +117,7 @@ func setupMux(
 
 func createEndpointHandler(
 	endpoints map[string]http.Handler,
-	eventEmitter events.EventEmitter,
+	eventEmitter *events.EventEmitter,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if handler, ok := endpoints[r.Method]; ok {
@@ -142,7 +143,7 @@ func createEndpointHandler(
 }
 
 func createNotFoundHandler(
-	eventEmitter events.EventEmitter,
+	eventEmitter *events.EventEmitter,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if eventEmitter != nil {
@@ -170,8 +171,8 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 }
 
 func multiplexEndpoints(
-	httpEndpoints []api.Endpoint,
-	eventEmitter events.EventEmitter,
+	httpEndpoints []Endpoint,
+	eventEmitter *events.EventEmitter,
 ) multiplexedEndpoints {
 	endpoints := multiplexedEndpoints{}
 	for i := range httpEndpoints {
@@ -200,7 +201,7 @@ func multiplexEndpoints(
 
 func serverPanicHandler(
 	next http.Handler,
-	eventEmitter events.EventEmitter,
+	eventEmitter *events.EventEmitter,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -209,7 +210,11 @@ func serverPanicHandler(
 					eventEmitter.Emit(
 						events.NewEvent(
 							Error,
-							fmt.Sprintf("Server panic: %v, %v", err, stackTraceSlice()),
+							fmt.Sprintf(
+								"Server panic: %v, %v",
+								err,
+								stackTraceSlice(),
+							),
 						),
 					)
 				}

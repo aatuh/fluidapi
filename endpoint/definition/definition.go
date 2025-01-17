@@ -2,6 +2,7 @@ package definition
 
 import (
 	"github.com/pakkasys/fluidapi/core/api"
+	"github.com/pakkasys/fluidapi/core/server"
 	"github.com/pakkasys/fluidapi/endpoint/middleware"
 )
 
@@ -17,8 +18,8 @@ type EndpointDefinition struct {
 //   - endpointDefinitions: A list of endpoint definitions to convert
 func EndpointDefinitionsToAPIEndpoints(
 	endpointDefinitions []EndpointDefinition,
-) []api.Endpoint {
-	endpoints := []api.Endpoint{}
+) []server.Endpoint {
+	endpoints := []server.Endpoint{}
 
 	for _, endpointDefinition := range endpointDefinitions {
 		middlewares := []api.Middleware{}
@@ -28,7 +29,7 @@ func EndpointDefinitionsToAPIEndpoints(
 
 		endpoints = append(
 			endpoints,
-			api.Endpoint{
+			server.Endpoint{
 				URL:         endpointDefinition.URL,
 				Method:      endpointDefinition.Method,
 				Middlewares: middlewares,

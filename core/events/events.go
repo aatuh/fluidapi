@@ -13,6 +13,7 @@ type Event struct {
 	Message string
 }
 
+// NewEvent creates a new event.
 func NewEvent(eventType EventType, message string) Event {
 	return Event{
 		Type:    eventType,
@@ -20,44 +21,38 @@ func NewEvent(eventType EventType, message string) Event {
 	}
 }
 
-// EventEmitter defines the interface for an event emitter.
-type EventEmitter interface {
-	RegisterListener(eventType EventType, listener func(Event))
-	Emit(event Event)
-}
-
-// DefaultEventEmitter is responsible for emitting events.
-type DefaultEventEmitter struct {
+// EventEmitter is responsible for emitting events.
+type EventEmitter struct {
 	listeners map[EventType][]func(Event)
 	mu        sync.RWMutex
 }
 
-// NewDefaultEventEmitter creates a new DefaultEventEmitter.
-func NewDefaultEventEmitter() *DefaultEventEmitter {
-	return &DefaultEventEmitter{
+// NewEventEmitter creates a new EventEmitter.
+func NewEventEmitter() *EventEmitter {
+	return &EventEmitter{
 		listeners: make(map[EventType][]func(Event)),
 	}
 }
 
 // RegisterListener registers a listener for a specific event type.
-func (emitter *DefaultEventEmitter) RegisterListener(
+func (e *EventEmitter) RegisterListener(
 	eventType EventType,
 	listener func(Event),
 ) {
-	emitter.mu.Lock()
-	defer emitter.mu.Unlock()
-	_, ok := emitter.listeners[eventType]
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	_, ok := e.listeners[eventType]
 	if !ok {
-		emitter.listeners[eventType] = []func(Event){}
+		e.listeners[eventType] = []func(Event){}
 	}
-	emitter.listeners[eventType] = append(emitter.listeners[eventType], listener)
+	e.listeners[eventType] = append(e.listeners[eventType], listener)
 }
 
 // Emit emits an event to all registered listeners.
-func (emitter *DefaultEventEmitter) Emit(event Event) {
-	emitter.mu.RLock()
-	defer emitter.mu.RUnlock()
-	if listeners, found := emitter.listeners[event.Type]; found {
+func (e *EventEmitter) Emit(event Event) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if listeners, found := e.listeners[event.Type]; found {
 		for _, listener := range listeners {
 			listener(event)
 		}
