@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/pakkasys/fluidapi/database"
 	"github.com/pakkasys/fluidapi/database/query"
-	util "github.com/pakkasys/fluidapi/database/util"
 )
 
-type RowScanner[T any] func(row util.Row, entity *T) error
-type RowScannerMultiple[T any] func(rows util.Rows, entity *T) error
+type RowScanner[T any] func(row database.Row, entity *T) error
+type RowScannerMultiple[T any] func(rows database.Rows, entity *T) error
 
 // Get returns a single entity.
 //
@@ -20,7 +20,7 @@ type RowScannerMultiple[T any] func(rows util.Rows, entity *T) error
 func Get[T any](
 	tableName string,
 	rowScanner RowScanner[T],
-	preparer util.Preparer,
+	preparer database.Preparer,
 	dbOptions *query.GetOptions,
 ) (*T, error) {
 	query, whereValues := query.Get(tableName, dbOptions)
@@ -50,7 +50,7 @@ func Get[T any](
 func GetMany[T any](
 	tableName string,
 	rowScannerMultiple RowScannerMultiple[T],
-	preparer util.Preparer,
+	preparer database.Preparer,
 	dbOptions *query.GetOptions,
 ) ([]T, error) {
 	query, whereValues := query.Get(tableName, dbOptions)
@@ -66,7 +66,7 @@ func GetMany[T any](
 }
 
 func queryMultiple[T any](
-	preparer util.Preparer,
+	preparer database.Preparer,
 	query string,
 	params []any,
 	rowScannerMultiple RowScannerMultiple[T],
@@ -87,7 +87,7 @@ func queryMultiple[T any](
 }
 
 func querySingle[T any](
-	preparer util.Preparer,
+	preparer database.Preparer,
 	query string,
 	params []any,
 	rowScanner RowScanner[T],
@@ -113,7 +113,7 @@ func querySingle[T any](
 }
 
 func rowsToEntities[T any](
-	rows util.Rows,
+	rows database.Rows,
 	rowScannerMultiple RowScannerMultiple[T],
 ) ([]T, error) {
 	if rowScannerMultiple == nil {

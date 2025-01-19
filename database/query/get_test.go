@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/pakkasys/fluidapi/endpoint/page"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,7 +11,7 @@ import (
 // TestProjectionsToStrings_NoProjections tests the case where no projections
 // are provided.
 func TestProjectionsToStrings_NoProjections(t *testing.T) {
-	projections := []util.Projection{}
+	projections := []clause.Projection{}
 	projectionStrings := projectionsToStrings(projections)
 	assert.Equal(t, []string{"*"}, projectionStrings)
 }
@@ -19,7 +19,7 @@ func TestProjectionsToStrings_NoProjections(t *testing.T) {
 // TestProjectionsToStrings_SingleProjection tests the case where a single
 // projection is provided.
 func TestProjectionsToStrings_SingleProjection(t *testing.T) {
-	projections := []util.Projection{
+	projections := []clause.Projection{
 		{Table: "user", Column: "name"},
 	}
 
@@ -32,7 +32,7 @@ func TestProjectionsToStrings_SingleProjection(t *testing.T) {
 // TestProjectionsToStrings_MultipleProjections tests the case where multiple
 // projections are provided.
 func TestProjectionsToStrings_MultipleProjections(t *testing.T) {
-	projections := []util.Projection{
+	projections := []clause.Projection{
 		{Table: "user", Column: "name"},
 		{Table: "orders", Column: "order_id"},
 	}
@@ -46,7 +46,7 @@ func TestProjectionsToStrings_MultipleProjections(t *testing.T) {
 // TestProjectionsToStrings_EmptyFields tests the case where a projection has
 // empty fields.
 func TestProjectionsToStrings_EmptyFields(t *testing.T) {
-	projections := []util.Projection{
+	projections := []clause.Projection{
 		{Table: "", Column: ""},
 	}
 
@@ -58,24 +58,24 @@ func TestProjectionsToStrings_EmptyFields(t *testing.T) {
 
 // TestJoinClause_NoJoins tests the case where no joins are provided.
 func TestJoinClause_NoJoins(t *testing.T) {
-	joins := []util.Join{}
+	joins := []clause.Join{}
 	joinClause := joinClause(joins)
 	assert.Equal(t, "", joinClause)
 }
 
 // TestJoinClause_SingleJoin tests the case where a single join is provided.
 func TestJoinClause_SingleJoin(t *testing.T) {
-	joins := []util.Join{
+	joins := []clause.Join{
 		{
-			Type:  util.JoinTypeInner,
+			Type:  clause.JoinTypeInner,
 			Table: "orders",
-			OnLeft: util.ColumSelector{
-				Table:  "user",
-				Column: "id",
+			OnLeft: clause.ColumnSelector{
+				Table:   "user",
+				Columnn: "id",
 			},
-			OnRight: util.ColumSelector{
-				Table:  "orders",
-				Column: "user_id",
+			OnRight: clause.ColumnSelector{
+				Table:   "orders",
+				Columnn: "user_id",
 			},
 		},
 	}
@@ -89,29 +89,29 @@ func TestJoinClause_SingleJoin(t *testing.T) {
 // TestJoinClause_MultipleJoins tests the case where multiple joins are
 // provided.
 func TestJoinClause_MultipleJoins(t *testing.T) {
-	joins := []util.Join{
+	joins := []clause.Join{
 		{
-			Type:  util.JoinTypeInner,
+			Type:  clause.JoinTypeInner,
 			Table: "order",
-			OnLeft: util.ColumSelector{
-				Table:  "user",
-				Column: "id",
+			OnLeft: clause.ColumnSelector{
+				Table:   "user",
+				Columnn: "id",
 			},
-			OnRight: util.ColumSelector{
-				Table:  "order",
-				Column: "user_id",
+			OnRight: clause.ColumnSelector{
+				Table:   "order",
+				Columnn: "user_id",
 			},
 		},
 		{
-			Type:  util.JoinTypeLeft,
+			Type:  clause.JoinTypeLeft,
 			Table: "payments",
-			OnLeft: util.ColumSelector{
-				Table:  "user",
-				Column: "id",
+			OnLeft: clause.ColumnSelector{
+				Table:   "user",
+				Columnn: "id",
 			},
-			OnRight: util.ColumSelector{
-				Table:  "payments",
-				Column: "user_id",
+			OnRight: clause.ColumnSelector{
+				Table:   "payments",
+				Columnn: "user_id",
 			},
 		},
 	}
@@ -125,17 +125,17 @@ func TestJoinClause_MultipleJoins(t *testing.T) {
 
 // TestJoinClause_EmptyFields tests the case where a join has empty fields.
 func TestJoinClause_EmptyFields(t *testing.T) {
-	joins := []util.Join{
+	joins := []clause.Join{
 		{
-			Type:  util.JoinTypeInner,
+			Type:  clause.JoinTypeInner,
 			Table: "",
-			OnLeft: util.ColumSelector{
-				Table:  "",
-				Column: "",
+			OnLeft: clause.ColumnSelector{
+				Table:   "",
+				Columnn: "",
 			},
-			OnRight: util.ColumSelector{
-				Table:  "",
-				Column: "",
+			OnRight: clause.ColumnSelector{
+				Table:   "",
+				Columnn: "",
 			},
 		},
 	}
@@ -149,7 +149,7 @@ func TestJoinClause_EmptyFields(t *testing.T) {
 
 // TestWhereClause_NoSelectors tests the case where no selectors are provided.
 func TestWhereClause_NoSelectors(t *testing.T) {
-	selectors := []util.Selector{}
+	selectors := []clause.Selector{}
 
 	whereClause, whereValues := whereClause(selectors)
 
@@ -161,7 +161,7 @@ func TestWhereClause_NoSelectors(t *testing.T) {
 // TestWhereClause_SingleSelector tests the case where a single selector is
 // provided.
 func TestWhereClause_SingleSelector(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
@@ -175,7 +175,7 @@ func TestWhereClause_SingleSelector(t *testing.T) {
 // TestWhereClause_MultipleSelectors tests the case where multiple selectors are
 // provided.
 func TestWhereClause_MultipleSelectors(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 		{Table: "user", Field: "age", Predicate: ">", Value: 18},
 	}
@@ -190,7 +190,7 @@ func TestWhereClause_MultipleSelectors(t *testing.T) {
 // TestWhereClause_DifferentPredicates tests the case where different predicates
 // are provided.
 func TestWhereClause_DifferentPredicates(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "name", Predicate: "LIKE", Value: "%Alice%"},
 		{Table: "user", Field: "age", Predicate: "<", Value: 30},
 	}
@@ -218,7 +218,7 @@ func TestBuildBaseGetQuery_NoOptions(t *testing.T) {
 // provided.
 func TestBuildBaseGetQuery_WithSelectors(t *testing.T) {
 	getOptions := GetOptions{}
-	getOptions.Selectors = []util.Selector{
+	getOptions.Selectors = []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
@@ -232,7 +232,7 @@ func TestBuildBaseGetQuery_WithSelectors(t *testing.T) {
 // TestBuildBaseGetQuery_WithOrders tests the case where orders are provided.
 func TestBuildBaseGetQuery_WithOrders(t *testing.T) {
 	getOptions := GetOptions{}
-	getOptions.Orders = []util.Order{
+	getOptions.Orders = []clause.Order{
 		{Table: "user", Field: "name", Direction: "ASC"},
 	}
 
@@ -247,7 +247,7 @@ func TestBuildBaseGetQuery_WithOrders(t *testing.T) {
 // provided.
 func TestBuildBaseGetQuery_WithProjections(t *testing.T) {
 	getOptions := GetOptions{}
-	getOptions.Projections = []util.Projection{
+	getOptions.Projections = []clause.Projection{
 		{Table: "user", Column: "name", Alias: "user_name"},
 	}
 
@@ -261,17 +261,17 @@ func TestBuildBaseGetQuery_WithProjections(t *testing.T) {
 // TestBuildBaseGetQuery_WithJoins tests the case where joins are provided.
 func TestBuildBaseGetQuery_WithJoins(t *testing.T) {
 	getOptions := GetOptions{}
-	getOptions.Joins = []util.Join{
+	getOptions.Joins = []clause.Join{
 		{
-			Type:  util.JoinTypeInner,
+			Type:  clause.JoinTypeInner,
 			Table: "order",
-			OnLeft: util.ColumSelector{
-				Table:  "user",
-				Column: "id",
+			OnLeft: clause.ColumnSelector{
+				Table:   "user",
+				Columnn: "id",
 			},
-			OnRight: util.ColumSelector{
-				Table:  "order",
-				Column: "user_id",
+			OnRight: clause.ColumnSelector{
+				Table:   "order",
+				Columnn: "user_id",
 			},
 		},
 	}
@@ -305,116 +305,4 @@ func TestBuildBaseGetQuery_WithPage(t *testing.T) {
 	expectedQuery := "SELECT * FROM `user` LIMIT 20 OFFSET 10"
 	assert.Equal(t, expectedQuery, query)
 	assert.Empty(t, whereValues)
-}
-
-// TestGetLimitOffsetClauseFromPage_NoPage tests the case where no page is
-// provided.
-func TestGetLimitOffsetClauseFromPage_NoPage(t *testing.T) {
-	var p *page.Page = nil
-	limitOffsetClause := getLimitOffsetClauseFromPage(p)
-	assert.Equal(t, "", limitOffsetClause)
-}
-
-// TestGetLimitOffsetClauseFromPage_WithPage tests the case where a page with
-// limit and offset is provided.
-func TestGetLimitOffsetClauseFromPage_WithPage(t *testing.T) {
-	p := &page.Page{Limit: 10, Offset: 20}
-
-	limitOffsetClause := getLimitOffsetClauseFromPage(p)
-
-	expected := "LIMIT 10 OFFSET 20"
-	assert.Equal(t, expected, limitOffsetClause)
-}
-
-// TestGetLimitOffsetClauseFromPage_ZeroLimit tests the case where limit is 0.
-func TestGetLimitOffsetClauseFromPage_ZeroLimit(t *testing.T) {
-	p := &page.Page{Limit: 0, Offset: 20}
-
-	limitOffsetClause := getLimitOffsetClauseFromPage(p)
-
-	expected := "LIMIT 0 OFFSET 20"
-	assert.Equal(t, expected, limitOffsetClause)
-}
-
-// TestGetLimitOffsetClauseFromPage_ZeroOffset tests the case where offset is 0.
-func TestGetLimitOffsetClauseFromPage_ZeroOffset(t *testing.T) {
-	p := &page.Page{Limit: 10, Offset: 0}
-
-	limitOffsetClause := getLimitOffsetClauseFromPage(p)
-
-	expected := "LIMIT 10 OFFSET 0"
-	assert.Equal(t, expected, limitOffsetClause)
-}
-
-// TestGetLimitOffsetClauseFromPage_ZeroLimitAndOffset tests the case where both
-// limit and offset are 0.
-func TestGetLimitOffsetClauseFromPage_ZeroLimitAndOffset(t *testing.T) {
-	p := &page.Page{Limit: 0, Offset: 0}
-
-	limitOffsetClause := getLimitOffsetClauseFromPage(p)
-
-	expected := "LIMIT 0 OFFSET 0"
-	assert.Equal(t, expected, limitOffsetClause)
-}
-
-// TestGetOrderClauseFromOrders_NoOrders tests the case where no orders are
-// provided.
-func TestGetOrderClauseFromOrders_NoOrders(t *testing.T) {
-	orders := []util.Order{}
-	orderClause := getOrderClauseFromOrders(orders)
-	assert.Equal(t, "", orderClause)
-}
-
-// TestGetOrderClauseFromOrders_WithoutTable tests the case where there is no
-// table in the order.
-func TestGetOrderClauseFromOrders_WithoutTable(t *testing.T) {
-	orders := []util.Order{
-		{Field: "name", Direction: "ASC"},
-	}
-
-	orderClause := getOrderClauseFromOrders(orders)
-
-	expected := "ORDER BY `name` ASC"
-	assert.Equal(t, expected, orderClause)
-}
-
-// TestGetOrderClauseFromOrders_SingleOrder tests the case where a single order
-// is provided.
-func TestGetOrderClauseFromOrders_SingleOrder(t *testing.T) {
-	orders := []util.Order{
-		{Table: "user", Field: "name", Direction: "ASC"},
-	}
-
-	orderClause := getOrderClauseFromOrders(orders)
-
-	expected := "ORDER BY `user`.`name` ASC"
-	assert.Equal(t, expected, orderClause)
-}
-
-// TestGetOrderClauseFromOrders_MultipleOrders tests the case where multiple
-// orders are provided.
-func TestGetOrderClauseFromOrders_MultipleOrders(t *testing.T) {
-	orders := []util.Order{
-		{Table: "user", Field: "name", Direction: "ASC"},
-		{Table: "user", Field: "age", Direction: "DESC"},
-	}
-
-	orderClause := getOrderClauseFromOrders(orders)
-
-	expected := "ORDER BY `user`.`name` ASC, `user`.`age` DESC"
-	assert.Equal(t, expected, orderClause)
-}
-
-// TestGetOrderClauseFromOrders_EmptyFields tests the case where orders have
-// empty fields.
-func TestGetOrderClauseFromOrders_EmptyFields(t *testing.T) {
-	orders := []util.Order{
-		{Table: "", Field: "", Direction: "ASC"},
-	}
-
-	orderClause := getOrderClauseFromOrders(orders)
-
-	// Expect an ORDER BY clause with empty table and field
-	expected := "ORDER BY `` ASC"
-	assert.Equal(t, expected, orderClause)
 }

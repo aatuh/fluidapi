@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ func TestUpsertManyQuery_NormalOperation(t *testing.T) {
 		{ID: 1, Name: "Alice", Age: 30},
 		{ID: 2, Name: "Bob", Age: 25},
 	}
-	projections := []util.Projection{
+	projections := []clause.Projection{
 		{Column: "name", Alias: "test"},
 		{Column: "age", Alias: "test"},
 	}
@@ -46,7 +46,7 @@ func TestUpsertManyQuery_SingleEntity(t *testing.T) {
 	entities := []*TestUpsertEntity{
 		{ID: 1, Name: "Alice"},
 	}
-	projections := []util.Projection{
+	projections := []clause.Projection{
 		{Column: "name", Alias: "test"},
 	}
 
@@ -68,7 +68,7 @@ func TestUpsertManyQuery_SingleEntity(t *testing.T) {
 func TestUpsertManyQuery_EmptyEntities(t *testing.T) {
 	// Test with no entities
 	entities := []*TestUpsertEntity{}
-	projections := []util.Projection{
+	projections := []clause.Projection{
 		{Column: "name", Alias: "test"},
 	}
 
@@ -102,7 +102,7 @@ func TestUpsertManyQuery_MissingUpdateProjections(t *testing.T) {
 		entities,
 		"user",
 		inserter,
-		[]util.Projection{},
+		[]clause.Projection{},
 	)
 
 	assert.Equal(

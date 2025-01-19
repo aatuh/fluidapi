@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +12,7 @@ import (
 // limit and orders.
 func TestWriteDeleteOptions_WithLimitAndOrders(t *testing.T) {
 	// Create a DeleteOptions with a limit and orders
-	orders := []util.Order{
+	orders := []clause.Order{
 		{Table: "user", Field: "name", Direction: "ASC"},
 		{Table: "user", Field: "age", Direction: "DESC"},
 	}
@@ -33,7 +33,7 @@ func TestWriteDeleteOptions_WithLimitAndOrders(t *testing.T) {
 // orders and no limit.
 func TestWriteDeleteOptions_WithOnlyOrders(t *testing.T) {
 	// Create a DeleteOptions with only orders
-	orders := []util.Order{
+	orders := []clause.Order{
 		{Table: "user", Field: "name", Direction: "ASC"},
 	}
 	opts := DeleteOptions{Limit: 0, Orders: orders}

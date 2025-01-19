@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	entitymock "github.com/pakkasys/fluidapi/database/entity/mock"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -36,9 +36,9 @@ func TestInsert(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockResult *utilmock.MockResult,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockResult *databasemock.MockResult,
 			mockErrorChecker *entitymock.MockErrorChecker,
 		)
 		entity        *CreateTestStruct
@@ -48,9 +48,9 @@ func TestInsert(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -65,9 +65,9 @@ func TestInsert(t *testing.T) {
 		{
 			name: "Exec Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -83,9 +83,9 @@ func TestInsert(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockResult := new(utilmock.MockResult)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockResult := new(databasemock.MockResult)
 			mockErrorChecker := new(entitymock.MockErrorChecker)
 
 			if tt.setupMocks != nil {
@@ -125,9 +125,9 @@ func TestInsertMany(t *testing.T) {
 		name       string
 		entities   []*CreateTestStruct
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockResult *utilmock.MockResult,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockResult *databasemock.MockResult,
 			mockErrorChecker *entitymock.MockErrorChecker,
 		)
 		expectedID    int64
@@ -140,9 +140,9 @@ func TestInsertMany(t *testing.T) {
 				{ID: 2, Name: "Bob"},
 			},
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -167,9 +167,9 @@ func TestInsertMany(t *testing.T) {
 				{ID: 2, Name: "Bob"},
 			},
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -185,9 +185,9 @@ func TestInsertMany(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockResult := new(utilmock.MockResult)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockResult := new(databasemock.MockResult)
 			mockErrorChecker := new(entitymock.MockErrorChecker)
 
 			if tt.setupMocks != nil {

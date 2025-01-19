@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 )
 
 // DeleteOptions is the options struct used for delete queries.
 type DeleteOptions struct {
 	Limit  int
-	Orders []util.Order
+	Orders []clause.Order
 }
 
 // Delete returns the SQL query string and the values for the query.
@@ -20,10 +20,10 @@ type DeleteOptions struct {
 //   - opts: The options for the query.
 func Delete(
 	tableName string,
-	selectors []util.Selector,
+	selectors []clause.Selector,
 	opts *DeleteOptions,
 ) (string, []any) {
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	whereClause := ""
 	if len(whereColumns) > 0 {
@@ -46,7 +46,7 @@ func writeDeleteOptions(
 	builder *strings.Builder,
 	opts *DeleteOptions,
 ) {
-	orderClause := getOrderClauseFromOrders(opts.Orders)
+	orderClause := GetOrderClauseFromOrders(opts.Orders)
 	if orderClause != "" {
 		builder.WriteString(" " + orderClause)
 	}

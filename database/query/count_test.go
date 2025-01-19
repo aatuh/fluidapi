@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +27,7 @@ func TestBuildBaseCountQuery_NoSelectorsNoJoins(t *testing.T) {
 func TestBuildBaseCountQuery_WithSelectors(t *testing.T) {
 	tableName := "test_table"
 	dbOptions := &CountOptions{
-		Selectors: []util.Selector{
+		Selectors: []clause.Selector{
 			{Table: "test_table", Field: "id", Predicate: "=", Value: 1},
 		},
 	}
@@ -45,17 +45,17 @@ func TestBuildBaseCountQuery_WithSelectors(t *testing.T) {
 func TestBuildBaseCountQuery_WithJoins(t *testing.T) {
 	tableName := "test_table"
 	dbOptions := &CountOptions{
-		Joins: []util.Join{
+		Joins: []clause.Join{
 			{
-				Type:  util.JoinTypeInner,
+				Type:  clause.JoinTypeInner,
 				Table: "other_table",
-				OnLeft: util.ColumSelector{
-					Table:  "test_table",
-					Column: "id",
+				OnLeft: clause.ColumnSelector{
+					Table:   "test_table",
+					Columnn: "id",
 				},
-				OnRight: util.ColumSelector{
-					Table:  "other_table",
-					Column: "ref_id",
+				OnRight: clause.ColumnSelector{
+					Table:   "other_table",
+					Columnn: "ref_id",
 				},
 			},
 		},
@@ -74,20 +74,20 @@ func TestBuildBaseCountQuery_WithJoins(t *testing.T) {
 func TestBuildBaseCountQuery_WithSelectorsAndJoins(t *testing.T) {
 	tableName := "test_table"
 	dbOptions := &CountOptions{
-		Selectors: []util.Selector{
+		Selectors: []clause.Selector{
 			{Table: "test_table", Field: "id", Predicate: "=", Value: 1},
 		},
-		Joins: []util.Join{
+		Joins: []clause.Join{
 			{
-				Type:  util.JoinTypeInner,
+				Type:  clause.JoinTypeInner,
 				Table: "other_table",
-				OnLeft: util.ColumSelector{
-					Table:  "test_table",
-					Column: "id",
+				OnLeft: clause.ColumnSelector{
+					Table:   "test_table",
+					Columnn: "id",
 				},
-				OnRight: util.ColumSelector{
-					Table:  "other_table",
-					Column: "ref_id",
+				OnRight: clause.ColumnSelector{
+					Table:   "other_table",
+					Columnn: "ref_id",
 				},
 			},
 		},

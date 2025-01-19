@@ -4,16 +4,90 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/stretchr/testify/assert"
 )
+
+// TestGetByField_Found tests the case where the selector with the given field
+// is found.
+func TestGetByField_Found(t *testing.T) {
+	selectors := clause.Selectors{
+		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+	}
+
+	selector := selectors.GetByField("name")
+
+	assert.NotNil(t, selector)
+	assert.Equal(t, "user", selector.Table)
+	assert.Equal(t, "name", selector.Field)
+	assert.Equal(t, "=", string(selector.Predicate))
+	assert.Equal(t, "Alice", selector.Value)
+}
+
+// TestGetByField_NotFound tests the case where the selector with the given
+// field is not found.
+func TestGetByField_NotFound(t *testing.T) {
+	selectors := clause.Selectors{
+		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+	}
+
+	selector := selectors.GetByField("age")
+
+	assert.Nil(t, selector)
+}
+
+// TestGetByFields_Found tests the case where the selectors with the given
+// fields are found.
+func TestGetByFields_Found(t *testing.T) {
+	selectors := clause.Selectors{
+		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Field: "age", Predicate: ">", Value: 25},
+	}
+
+	resultSelectors := selectors.GetByFields("name", "age")
+
+	assert.Len(t, resultSelectors, 2)
+	assert.Equal(t, "name", resultSelectors[0].Field)
+	assert.Equal(t, "age", resultSelectors[1].Field)
+}
+
+// TestGetByFields_NotFound tests the case where none of the selectors with the
+// given fields are found.
+func TestGetByFields_NotFound(t *testing.T) {
+	selectors := clause.Selectors{
+		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+	}
+
+	resultSelectors := selectors.GetByFields("age", "address")
+
+	assert.Len(t, resultSelectors, 0)
+}
+
+// TestGetByFields_PartialFound tests the case where some selectors with the
+// given fields are found.
+func TestGetByFields_PartialFound(t *testing.T) {
+	selectors := clause.Selectors{
+		{Table: "user", Field: "id", Predicate: "=", Value: 1},
+		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Field: "age", Predicate: ">", Value: 25},
+	}
+
+	resultSelectors := selectors.GetByFields("name", "address")
+
+	assert.Len(t, resultSelectors, 1)
+	assert.Equal(t, "name", resultSelectors[0].Field)
+}
 
 // TestProcessSelectors_NoSelectors tests the case where no selectors are
 // provided.
 func TestProcessSelectors_NoSelectors(t *testing.T) {
-	selectors := []util.Selector{}
+	selectors := []clause.Selector{}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	// Expect no columns and no values
 	assert.Empty(t, whereColumns)
@@ -23,11 +97,11 @@ func TestProcessSelectors_NoSelectors(t *testing.T) {
 // TestProcessSelectors_SingleSelector tests the case where a single selector is
 // provided.
 func TestProcessSelectors_SingleSelector(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`id` = ?"}
 	expectedValues := []any{1}
@@ -39,12 +113,12 @@ func TestProcessSelectors_SingleSelector(t *testing.T) {
 // TestProcessSelectors_MultipleSelectors tests the case where multiple
 // selectors are provided.
 func TestProcessSelectors_MultipleSelectors(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 		{Table: "user", Field: "age", Predicate: ">", Value: 18},
 	}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`id` = ?", "`user`.`age` > ?"}
 	expectedValues := []any{1, 18}
@@ -56,11 +130,11 @@ func TestProcessSelectors_MultipleSelectors(t *testing.T) {
 // TestProcessSelectors_WithInPredicate tests the case where a selector with
 // "IN" predicate is provided.
 func TestProcessSelectors_WithInPredicate(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "IN", Value: []int{1, 2, 3}},
 	}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`id` IN (?,?,?)"}
 	expectedValues := []any{1, 2, 3}
@@ -72,11 +146,11 @@ func TestProcessSelectors_WithInPredicate(t *testing.T) {
 // TestProcessSelectors_WithNilValue tests the case where a selector with a nil
 // value is provided.
 func TestProcessSelectors_WithNilValue(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "deleted_at", Predicate: "=", Value: nil},
 	}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`deleted_at` IS NULL"}
 
@@ -87,12 +161,12 @@ func TestProcessSelectors_WithNilValue(t *testing.T) {
 // TestProcessSelectors_WithDifferentPredicates tests the case where different
 // predicates are provided.
 func TestProcessSelectors_WithDifferentPredicates(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "name", Predicate: "LIKE", Value: "%Alice%"},
 		{Table: "user", Field: "age", Predicate: "<", Value: 30},
 	}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	expectedColumns := []string{"`user`.`name` LIKE ?", "`user`.`age` < ?"}
 	expectedValues := []any{"%Alice%", 30}
@@ -104,11 +178,11 @@ func TestProcessSelectors_WithDifferentPredicates(t *testing.T) {
 // TestProcessSelectors_EmptyTableField tests the case where a selector with an
 // empty table and field is provided.
 func TestProcessSelectors_EmptyTableField(t *testing.T) {
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "", Field: "", Predicate: "=", Value: 1},
 	}
 
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	expectedColumns := []string{"`` = ?"}
 	expectedValues := []any{1}
@@ -120,7 +194,7 @@ func TestProcessSelectors_EmptyTableField(t *testing.T) {
 // TestProcessSelector_WithInPredicate tests the processSelector function with
 // an "IN" predicate.
 func TestProcessSelector_WithInPredicate(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "id",
 		Predicate: "IN",
@@ -139,7 +213,7 @@ func TestProcessSelector_WithInPredicate(t *testing.T) {
 // TestProcessSelector_WithDefaultPredicate tests the processSelector function
 // with a default predicate.
 func TestProcessSelector_WithDefaultPredicate(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "name",
 		Predicate: "=",
@@ -158,7 +232,7 @@ func TestProcessSelector_WithDefaultPredicate(t *testing.T) {
 // TestProcessInSelector_WithSliceValue tests the processInSelector function
 // with a slice value.
 func TestProcessInSelector_WithSliceValue(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "id",
 		Predicate: "IN",
@@ -177,7 +251,7 @@ func TestProcessInSelector_WithSliceValue(t *testing.T) {
 // TestProcessInSelector_WithNonSliceValue tests the processInSelector function
 // with a non-slice value.
 func TestProcessInSelector_WithNonSliceValue(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "id",
 		Predicate: "IN",
@@ -196,7 +270,7 @@ func TestProcessInSelector_WithNonSliceValue(t *testing.T) {
 // TestProcessInSelector_EmptySlice tests the processInSelector function with an
 // empty slice value.
 func TestProcessInSelector_EmptySlice(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "id",
 		Predicate: "IN",
@@ -215,7 +289,7 @@ func TestProcessInSelector_EmptySlice(t *testing.T) {
 // TestProcessInSelector_WithStringSliceValue tests the processInSelector
 // function with a slice of strings.
 func TestProcessInSelector_WithStringSliceValue(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "name",
 		Predicate: "IN",
@@ -234,7 +308,7 @@ func TestProcessInSelector_WithStringSliceValue(t *testing.T) {
 // TestProcessInSelector_NilValue tests the processInSelector function with a
 // nil value.
 func TestProcessInSelector_NilValue(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "id",
 		Predicate: "IN",
@@ -253,7 +327,7 @@ func TestProcessInSelector_NilValue(t *testing.T) {
 // TestProcessDefaultSelector_WithValue tests the processDefaultSelector
 // function with a non-nil value.
 func TestProcessDefaultSelector_WithValue(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "name",
 		Predicate: "=",
@@ -272,7 +346,7 @@ func TestProcessDefaultSelector_WithValue(t *testing.T) {
 // TestProcessDefaultSelector_WithoutTable tests the processDefaultSelector
 // function without an empty field value.
 func TestProcessDefaultSelector_WithoutTable(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "",
 		Field:     "name",
 		Predicate: "=",
@@ -291,7 +365,7 @@ func TestProcessDefaultSelector_WithoutTable(t *testing.T) {
 // TestProcessDefaultSelector_NilValue tests the processDefaultSelector function
 // with a nil value and "=" predicate.
 func TestProcessDefaultSelector_NilValue(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "name",
 		Predicate: "=",
@@ -308,7 +382,7 @@ func TestProcessDefaultSelector_NilValue(t *testing.T) {
 // TestProcessNullSelector_NotEquals tests the processNullSelector function with
 // a "!=" predicate.
 func TestProcessNullSelector_NotEquals(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "name",
 		Predicate: "!=",
@@ -325,7 +399,7 @@ func TestProcessNullSelector_NotEquals(t *testing.T) {
 // TestProcessNullSelector_InvalidPredicate tests the processNullSelector
 // function with an unsupported predicate.
 func TestProcessNullSelector_InvalidPredicate(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "user",
 		Field:     "name",
 		Predicate: ">",
@@ -342,7 +416,7 @@ func TestProcessNullSelector_InvalidPredicate(t *testing.T) {
 // TestProcessNullSelector_WithoutTable tests the processNullSelector function
 // without a table.
 func TestProcessNullSelector_WithoutTable(t *testing.T) {
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table:     "",
 		Field:     "name",
 		Predicate: "=",
@@ -360,7 +434,7 @@ func TestProcessNullSelector_WithoutTable(t *testing.T) {
 // is provided.
 func TestBuildNullClause_WithTable(t *testing.T) {
 	// Test case where a table is provided
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table: "user",
 		Field: "name",
 	}
@@ -375,7 +449,7 @@ func TestBuildNullClause_WithTable(t *testing.T) {
 // table is provided.
 func TestBuildNullClause_WithoutTable(t *testing.T) {
 	// Test case where no table is provided
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table: "",
 		Field: "name",
 	}
@@ -390,7 +464,7 @@ func TestBuildNullClause_WithoutTable(t *testing.T) {
 // empty field.
 func TestBuildNullClause_EmptyField(t *testing.T) {
 	// Test case with an empty field
-	selector := util.Selector{
+	selector := clause.Selector{
 		Table: "user",
 		Field: "",
 	}

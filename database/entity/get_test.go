@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/pakkasys/fluidapi/database"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,7 +17,7 @@ type MockRowScanner[T any] struct {
 	mock.Mock
 }
 
-func (m *MockRowScanner[T]) Scan(row util.Row, entity *T) error {
+func (m *MockRowScanner[T]) Scan(row database.Row, entity *T) error {
 	return row.Scan(entity)
 }
 
@@ -26,7 +26,7 @@ type MockRowScannerMultiple[T any] struct {
 	mock.Mock
 }
 
-func (m *MockRowScannerMultiple[T]) Scan(rows util.Rows, entity *T) error {
+func (m *MockRowScannerMultiple[T]) Scan(rows database.Rows, entity *T) error {
 	return rows.Scan(entity)
 }
 
@@ -41,9 +41,9 @@ func TestGet(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockRow *utilmock.MockRow,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockRow *databasemock.MockRow,
 			mockScanner *MockRowScanner[GetTestStruct],
 		)
 		tableName     string
@@ -54,9 +54,9 @@ func TestGet(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -73,9 +73,9 @@ func TestGet(t *testing.T) {
 		{
 			name: "Query Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", mock.Anything).
@@ -89,9 +89,9 @@ func TestGet(t *testing.T) {
 		{
 			name: "No Rows",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -109,9 +109,9 @@ func TestGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockRow := new(utilmock.MockRow)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockRow := new(databasemock.MockRow)
 			mockScanner := new(MockRowScanner[GetTestStruct])
 
 			if tt.setupMocks != nil {
@@ -153,9 +153,9 @@ func TestGetMany(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockRows *utilmock.MockRows,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockRows *databasemock.MockRows,
 			mockScanner *MockRowScannerMultiple[GetTestStruct],
 		)
 		tableName      string
@@ -166,9 +166,9 @@ func TestGetMany(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRows *utilmock.MockRows,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -188,9 +188,9 @@ func TestGetMany(t *testing.T) {
 		{
 			name: "Query Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRows *utilmock.MockRows,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockDB.On("Prepare", mock.Anything).
@@ -204,9 +204,9 @@ func TestGetMany(t *testing.T) {
 		{
 			name: "No Rows",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRows *utilmock.MockRows,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -225,9 +225,9 @@ func TestGetMany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockRows := new(utilmock.MockRows)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockRows := new(databasemock.MockRows)
 			mockScanner := new(MockRowScannerMultiple[GetTestStruct])
 
 			if tt.setupMocks != nil {
@@ -265,9 +265,9 @@ func TestQueryMultiple(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockRows *utilmock.MockRows,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockRows *databasemock.MockRows,
 			mockScanner *MockRowScannerMultiple[GetTestStruct],
 		)
 		query          string
@@ -278,9 +278,9 @@ func TestQueryMultiple(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRows *utilmock.MockRows,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE active = ?").Return(mockStmt, nil)
@@ -300,9 +300,9 @@ func TestQueryMultiple(t *testing.T) {
 		{
 			name: "Query Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRows *utilmock.MockRows,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE active = ?").
@@ -316,9 +316,9 @@ func TestQueryMultiple(t *testing.T) {
 		{
 			name: "Rows Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRows *utilmock.MockRows,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE active = ?").Return(mockStmt, nil)
@@ -339,9 +339,9 @@ func TestQueryMultiple(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockRows := new(utilmock.MockRows)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockRows := new(databasemock.MockRows)
 			mockScanner := new(MockRowScannerMultiple[GetTestStruct])
 
 			if tt.setupMocks != nil {
@@ -379,9 +379,9 @@ func TestQuerySingle(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockRow *utilmock.MockRow,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockRow *databasemock.MockRow,
 			mockScanner *MockRowScanner[GetTestStruct],
 		)
 		query         string
@@ -392,9 +392,9 @@ func TestQuerySingle(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE id = ?").Return(mockStmt, nil)
@@ -411,9 +411,9 @@ func TestQuerySingle(t *testing.T) {
 		{
 			name: "Prepare Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE id = ?").
@@ -427,9 +427,9 @@ func TestQuerySingle(t *testing.T) {
 		{
 			name: "Row Scanner Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE id = ?").Return(mockStmt, nil)
@@ -445,9 +445,9 @@ func TestQuerySingle(t *testing.T) {
 		{
 			name: "Row Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 				mockScanner *MockRowScanner[GetTestStruct],
 			) {
 				mockDB.On("Prepare", "SELECT * FROM user WHERE id = ?").Return(mockStmt, nil)
@@ -465,9 +465,9 @@ func TestQuerySingle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockRow := new(utilmock.MockRow)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockRow := new(databasemock.MockRow)
 			mockScanner := new(MockRowScanner[GetTestStruct])
 
 			if tt.setupMocks != nil {
@@ -505,7 +505,7 @@ func TestRowsToEntities(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockRows *utilmock.MockRows,
+			mockRows *databasemock.MockRows,
 			mockScanner *MockRowScannerMultiple[GetTestStruct],
 		)
 		rowScanner     RowScannerMultiple[GetTestStruct]
@@ -515,7 +515,7 @@ func TestRowsToEntities(t *testing.T) {
 		{
 			name: "No RowScannerMultiple",
 			setupMocks: func(
-				mockRows *utilmock.MockRows,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				// No mocks needed for this test case
@@ -527,7 +527,7 @@ func TestRowsToEntities(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockRows *utilmock.MockRows,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				testEntity := GetTestStruct{}
@@ -545,7 +545,7 @@ func TestRowsToEntities(t *testing.T) {
 		{
 			name: "No Rows",
 			setupMocks: func(
-				mockRows *utilmock.MockRows,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockRows.On("Next").Return(false).Once() // No rows
@@ -558,7 +558,7 @@ func TestRowsToEntities(t *testing.T) {
 		{
 			name: "Row Scanner Error",
 			setupMocks: func(
-				mockRows *utilmock.MockRows,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockRows.On("Next").Return(true).Once() // Simulate the first row read
@@ -572,7 +572,7 @@ func TestRowsToEntities(t *testing.T) {
 		{
 			name: "Rows Error",
 			setupMocks: func(
-				mockRows *utilmock.MockRows,
+				mockRows *databasemock.MockRows,
 				mockScanner *MockRowScannerMultiple[GetTestStruct],
 			) {
 				mockRows.On("Next").Return(true).Once() // Simulate the first row read
@@ -588,7 +588,7 @@ func TestRowsToEntities(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRows := new(utilmock.MockRows)
+			mockRows := new(databasemock.MockRows)
 			mockScanner := new(MockRowScannerMultiple[GetTestStruct])
 
 			if tt.setupMocks != nil {

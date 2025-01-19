@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 )
 
 // UpsertMany creates an upsert query for a list of entities.
@@ -17,7 +17,7 @@ func UpsertMany[T any](
 	entities []*T,
 	tableName string,
 	insertedValue InsertedValues[*T],
-	updateProjections []util.Projection,
+	updateProjections []clause.Projection,
 ) (string, []any) {
 	if len(entities) == 0 {
 		return "", nil

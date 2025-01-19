@@ -1,4 +1,4 @@
-package util
+package database
 
 import (
 	"context"
@@ -14,11 +14,11 @@ type Preparer interface {
 // DB is an interface that wraps the basic methods used from sql.DB.
 type DB interface {
 	Preparer
-	Ping() error
-	SetConnMaxLifetime(d time.Duration)
-	SetConnMaxIdleTime(d time.Duration)
-	SetMaxOpenConns(n int)
-	SetMaxIdleConns(n int)
+	Ping() error                        // TODO: Opinionated?
+	SetConnMaxLifetime(d time.Duration) // TODO: Opinionated?
+	SetConnMaxIdleTime(d time.Duration) // TODO: Opinionated?
+	SetMaxOpenConns(n int)              // TODO: Opinionated?
+	SetMaxIdleConns(n int)              // TODO: Opinionated?
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error)
 	Exec(query string, args ...any) (Result, error)
 	Query(query string, args ...any) (Rows, error)

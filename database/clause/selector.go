@@ -1,6 +1,6 @@
-package util
+package clause
 
-// Selector is a struct that represents a database selector.
+// Selector represents a database selector.
 type Selector struct {
 	Table     string
 	Field     string
@@ -8,6 +8,7 @@ type Selector struct {
 	Value     any
 }
 
+// Selectors represents a list of database selectors.
 type Selectors []Selector
 
 // GetByField returns selector with the given field.

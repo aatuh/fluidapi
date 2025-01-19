@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 )
 
 // UpdateField is the options struct used for update queries.
@@ -21,9 +21,9 @@ type UpdateField struct {
 func UpdateQuery(
 	tableName string,
 	updateFields []UpdateField,
-	selectors []util.Selector,
+	selectors []clause.Selector,
 ) (string, []any) {
-	whereColumns, whereValues := processSelectors(selectors)
+	whereColumns, whereValues := ProcessSelectors(selectors)
 
 	setClause, values := getSetClause(updateFields)
 	values = append(values, whereValues...)

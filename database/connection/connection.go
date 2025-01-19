@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 )
 
 // DriverFactory is a function that creates a database driver.
-type DriverFactory func(driver string, dsn string) (util.DB, error)
+type DriverFactory func(driver string, dsn string) (database.DB, error)
 
 // Config holds the configuration for the database connection.
 type Config struct {
@@ -48,7 +48,7 @@ func Connect(
 	cfg Config,
 	dbFactory DriverFactory,
 	dsn string,
-) (util.DB, error) {
+) (database.DB, error) {
 	db, err := dbFactory(cfg.Driver, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -102,7 +102,7 @@ func GetDSN(cfg Config) (*string, error) {
 	return &dsn, nil
 }
 
-func configureConnection(db util.DB, cfg Config) {
+func configureConnection(db database.DB, cfg Config) {
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 	db.SetMaxOpenConns(cfg.MaxOpenConns)

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 )
 
 const (
@@ -15,7 +15,10 @@ const (
 	null  = "NULL"
 )
 
-func processSelectors(selectors []util.Selector) ([]string, []any) {
+// ProcessSelectors processes selectors and returns columns and values.
+//
+//   - selectors: the selectors to process
+func ProcessSelectors(selectors []clause.Selector) ([]string, []any) {
 	var whereColumns []string
 	var whereValues []any
 	for _, selector := range selectors {
@@ -26,14 +29,14 @@ func processSelectors(selectors []util.Selector) ([]string, []any) {
 	return whereColumns, whereValues
 }
 
-func processSelector(selector util.Selector) (string, []any) {
+func processSelector(selector clause.Selector) (string, []any) {
 	if selector.Predicate == in {
 		return processInSelector(selector)
 	}
 	return processDefaultSelector(selector)
 }
 
-func processInSelector(selector util.Selector) (string, []any) {
+func processInSelector(selector clause.Selector) (string, []any) {
 	value := reflect.ValueOf(selector.Value)
 	if value.Kind() == reflect.Slice {
 		placeholders, values := createPlaceholdersAndValues(value)
@@ -55,7 +58,7 @@ func processInSelector(selector util.Selector) (string, []any) {
 	), []any{selector.Value}
 }
 
-func processDefaultSelector(selector util.Selector) (string, []any) {
+func processDefaultSelector(selector clause.Selector) (string, []any) {
 	if selector.Value == nil {
 		return processNullSelector(selector)
 	}
@@ -75,7 +78,7 @@ func processDefaultSelector(selector util.Selector) (string, []any) {
 	}
 }
 
-func processNullSelector(selector util.Selector) (string, []any) {
+func processNullSelector(selector clause.Selector) (string, []any) {
 	if selector.Predicate == "=" {
 		return buildNullClause(selector, is), nil
 	}
@@ -85,7 +88,7 @@ func processNullSelector(selector util.Selector) (string, []any) {
 	return "", nil
 }
 
-func buildNullClause(selector util.Selector, clause string) string {
+func buildNullClause(selector clause.Selector, clause string) string {
 	if selector.Table == "" {
 		return fmt.Sprintf("`%s` %s %s", selector.Field, clause, null)
 	}

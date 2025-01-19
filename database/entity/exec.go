@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database"
 )
 
 // Exec runs a query and returns the result.
@@ -10,10 +10,10 @@ import (
 //   - query: The query string.
 //   - parameters: The parameters for the query.
 func Exec(
-	preparer util.Preparer,
+	preparer database.Preparer,
 	query string,
 	parameters []any,
-) (util.Result, error) {
+) (database.Result, error) {
 	stmt, err := preparer.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -35,10 +35,10 @@ func Exec(
 //   - query: The query string.
 //   - parameters: The parameters for the query.
 func Query(
-	preparer util.Preparer,
+	preparer database.Preparer,
 	query string,
 	parameters []any,
-) (util.Rows, util.Stmt, error) {
+) (database.Rows, database.Stmt, error) {
 	stmt, err := preparer.Prepare(query)
 	if err != nil {
 		return nil, nil, err

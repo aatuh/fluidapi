@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/pakkasys/fluidapi/database/clause"
 	entitymock "github.com/pakkasys/fluidapi/database/entity/mock"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,12 +17,12 @@ func TestDelete(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockResult *utilmock.MockResult,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockResult *databasemock.MockResult,
 			mockErrorChecker *entitymock.MockErrorChecker,
 		)
-		selectors     []util.Selector
+		selectors     []clause.Selector
 		opts          *query.DeleteOptions
 		expectedCount int64
 		expectedError string
@@ -30,9 +30,9 @@ func TestDelete(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -40,7 +40,7 @@ func TestDelete(t *testing.T) {
 				mockStmt.On("Close").Return(nil)
 				mockResult.On("RowsAffected").Return(int64(3), nil)
 			},
-			selectors:     []util.Selector{{Field: "id", Value: 1}},
+			selectors:     []clause.Selector{{Field: "id", Value: 1}},
 			opts:          nil,
 			expectedCount: 3,
 			expectedError: "",
@@ -48,16 +48,16 @@ func TestDelete(t *testing.T) {
 		{
 			name: "Exec Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
 				mockStmt.On("Exec", mock.Anything).Return(nil, errors.New("exec error"))
 				mockStmt.On("Close").Return(nil)
 			},
-			selectors:     []util.Selector{{Field: "id", Value: 1}},
+			selectors:     []clause.Selector{{Field: "id", Value: 1}},
 			opts:          nil,
 			expectedCount: 0,
 			expectedError: "exec error",
@@ -65,9 +65,9 @@ func TestDelete(t *testing.T) {
 		{
 			name: "RowsAffected Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -75,7 +75,7 @@ func TestDelete(t *testing.T) {
 				mockStmt.On("Close").Return(nil)
 				mockResult.On("RowsAffected").Return(int64(0), errors.New("rows affected error"))
 			},
-			selectors:     []util.Selector{{Field: "id", Value: 1}},
+			selectors:     []clause.Selector{{Field: "id", Value: 1}},
 			opts:          nil,
 			expectedCount: 0,
 			expectedError: "rows affected error",
@@ -84,9 +84,9 @@ func TestDelete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockResult := new(utilmock.MockResult)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockResult := new(databasemock.MockResult)
 			mockErrorChecker := new(entitymock.MockErrorChecker)
 
 			if tt.setupMocks != nil {

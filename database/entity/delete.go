@@ -1,8 +1,9 @@
 package entity
 
 import (
+	"github.com/pakkasys/fluidapi/database"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
 )
 
 // Delete deletes entities from the database.
@@ -12,9 +13,9 @@ import (
 //   - selectors: The selectors for the entities to delete.
 //   - opts: The options for the query.
 func Delete(
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
-	selectors []util.Selector,
+	selectors []clause.Selector,
 	opts *query.DeleteOptions,
 ) (int64, error) {
 	query, whereValues := query.Delete(tableName, selectors, opts)

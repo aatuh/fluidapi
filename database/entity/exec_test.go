@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +12,7 @@ import (
 func TestExec(t *testing.T) {
 	tests := []struct {
 		name          string
-		setupMocks    func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult)
+		setupMocks    func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockResult *MockSQLResult)
 		query         string
 		parameters    []any
 		expectedError string
@@ -20,7 +20,7 @@ func TestExec(t *testing.T) {
 	}{
 		{
 			name: "Normal Operation",
-			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult) {
+			setupMocks: func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockResult *MockSQLResult) {
 				mockDB.On("Prepare", "UPDATE users SET name = ? WHERE id = ?").Return(mockStmt, nil)
 				mockStmt.On("Exec", []any{"Alice", 1}).Return(mockResult, nil)
 				mockStmt.On("Close").Return(nil)
@@ -32,7 +32,7 @@ func TestExec(t *testing.T) {
 		},
 		{
 			name: "Prepare Error",
-			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult) {
+			setupMocks: func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockResult *MockSQLResult) {
 				mockDB.On("Prepare", "UPDATE users SET name = ? WHERE id = ?").Return(nil, errors.New("prepare error"))
 			},
 			query:         "UPDATE users SET name = ? WHERE id = ?",
@@ -42,7 +42,7 @@ func TestExec(t *testing.T) {
 		},
 		{
 			name: "Exec Error",
-			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockResult *MockSQLResult) {
+			setupMocks: func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockResult *MockSQLResult) {
 				mockDB.On("Prepare", "UPDATE users SET name = ? WHERE id = ?").Return(mockStmt, nil)
 				mockStmt.On("Exec", []any{"Alice", 1}).Return(nil, errors.New("exec error"))
 				mockStmt.On("Close").Return(nil)
@@ -56,8 +56,8 @@ func TestExec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
 			mockResult := new(MockSQLResult)
 
 			if tt.setupMocks != nil {
@@ -93,9 +93,9 @@ func TestQuery(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockRows *utilmock.MockRows,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockRows *databasemock.MockRows,
 		)
 		query         string
 		parameters    []any
@@ -105,7 +105,7 @@ func TestQuery(t *testing.T) {
 	}{
 		{
 			name: "Normal Operation",
-			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockRows *utilmock.MockRows) {
+			setupMocks: func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockRows *databasemock.MockRows) {
 				mockDB.On("Prepare", "SELECT * FROM users WHERE id = ?").Return(mockStmt, nil)
 				mockStmt.On("Query", []any{1}).Return(mockRows, nil)
 			},
@@ -117,7 +117,7 @@ func TestQuery(t *testing.T) {
 		},
 		{
 			name: "Prepare Error",
-			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockRows *utilmock.MockRows) {
+			setupMocks: func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockRows *databasemock.MockRows) {
 				mockDB.On("Prepare", "SELECT * FROM users WHERE id = ?").Return(nil, errors.New("prepare error"))
 			},
 			query:         "SELECT * FROM users WHERE id = ?",
@@ -128,7 +128,7 @@ func TestQuery(t *testing.T) {
 		},
 		{
 			name: "Query Error",
-			setupMocks: func(mockDB *utilmock.MockDB, mockStmt *utilmock.MockStmt, mockRows *utilmock.MockRows) {
+			setupMocks: func(mockDB *databasemock.MockDB, mockStmt *databasemock.MockStmt, mockRows *databasemock.MockRows) {
 				mockDB.On("Prepare", "SELECT * FROM users WHERE id = ?").Return(mockStmt, nil)
 				mockStmt.On("Query", []any{1}).Return(nil, errors.New("query error"))
 				mockStmt.On("Close").Return(nil)
@@ -143,9 +143,9 @@ func TestQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockRows := new(utilmock.MockRows)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockRows := new(databasemock.MockRows)
 
 			if tt.setupMocks != nil {
 				tt.setupMocks(mockDB, mockStmt, mockRows)

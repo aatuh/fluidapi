@@ -6,9 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pakkasys/fluidapi/database/util"
-	"github.com/pakkasys/fluidapi/database/util/mock"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
+	"github.com/pakkasys/fluidapi/database"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,8 +16,8 @@ func TestConnect(t *testing.T) {
 	tests := []struct {
 		name          string
 		cfg           Config
-		mockDBSetup   func(mockDB *mock.MockDB)
-		mockFactory   func(mockDB *mock.MockDB) DriverFactory
+		mockDBSetup   func(mockDB *databasemock.MockDB)
+		mockFactory   func(mockDB *databasemock.MockDB) DriverFactory
 		expectedError error
 	}{
 		{
@@ -30,15 +29,15 @@ func TestConnect(t *testing.T) {
 				MaxOpenConns:    100,
 				MaxIdleConns:    10,
 			},
-			mockDBSetup: func(mockDB *mock.MockDB) {
+			mockDBSetup: func(mockDB *databasemock.MockDB) {
 				mockDB.On("Ping").Return(nil).Once()
 				mockDB.On("SetConnMaxLifetime", 30*time.Minute).Once()
 				mockDB.On("SetConnMaxIdleTime", 10*time.Minute).Once()
 				mockDB.On("SetMaxOpenConns", 100).Once()
 				mockDB.On("SetMaxIdleConns", 10).Once()
 			},
-			mockFactory: func(mockDB *mock.MockDB) DriverFactory {
-				return func(driver string, dsn string) (util.DB, error) {
+			mockFactory: func(mockDB *databasemock.MockDB) DriverFactory {
+				return func(driver string, dsn string) (database.DB, error) {
 					return mockDB, nil
 				}
 			},
@@ -50,8 +49,8 @@ func TestConnect(t *testing.T) {
 				Driver: MySQL,
 			},
 			mockDBSetup: nil,
-			mockFactory: func(mockDB *mock.MockDB) DriverFactory {
-				return func(driver string, dsn string) (util.DB, error) {
+			mockFactory: func(mockDB *databasemock.MockDB) DriverFactory {
+				return func(driver string, dsn string) (database.DB, error) {
 					return nil, errors.New("failed to create driver")
 				}
 			},
@@ -66,15 +65,15 @@ func TestConnect(t *testing.T) {
 				MaxOpenConns:    100,
 				MaxIdleConns:    10,
 			},
-			mockDBSetup: func(mockDB *mock.MockDB) {
+			mockDBSetup: func(mockDB *databasemock.MockDB) {
 				mockDB.On("SetConnMaxLifetime", 30*time.Minute).Once()
 				mockDB.On("SetConnMaxIdleTime", 10*time.Minute).Once()
 				mockDB.On("SetMaxOpenConns", 100).Once()
 				mockDB.On("SetMaxIdleConns", 10).Once()
 				mockDB.On("Ping").Return(errors.New("ping failed")).Once()
 			},
-			mockFactory: func(mockDB *mock.MockDB) DriverFactory {
-				return func(driver string, dsn string) (util.DB, error) {
+			mockFactory: func(mockDB *databasemock.MockDB) DriverFactory {
+				return func(driver string, dsn string) (database.DB, error) {
 					return mockDB, nil
 				}
 			},
@@ -85,7 +84,7 @@ func TestConnect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			mockDB := new(mock.MockDB)
+			mockDB := new(databasemock.MockDB)
 			if tt.mockDBSetup != nil {
 				tt.mockDBSetup(mockDB)
 			}
@@ -188,7 +187,7 @@ func TestGetDSN(t *testing.T) {
 // TestConfigureConnection tests the configureConnection function.
 func TestConfigureConnection(t *testing.T) {
 	// Create a mock database
-	mockDB := new(utilmock.MockDB)
+	mockDB := new(databasemock.MockDB)
 
 	// Expected configuration
 	cfg := Config{

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
-	"github.com/pakkasys/fluidapi/database/util/mock"
+	"github.com/pakkasys/fluidapi/database"
+	"github.com/pakkasys/fluidapi/database/mock"
 	endpointutil "github.com/pakkasys/fluidapi/endpoint/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +17,7 @@ func TestExecuteTransaction_Success(t *testing.T) {
 	mockTx := new(mock.MockTx)
 
 	// Mock the transactional function to return a successful result
-	transactionalFunc := func(ctx context.Context, tx util.Tx) (string, error) {
+	transactionalFunc := func(ctx context.Context, tx database.Tx) (string, error) {
 		return "success", nil
 	}
 
@@ -38,7 +38,7 @@ func TestExecuteTransaction_TransactionalFnError(t *testing.T) {
 	mockTx := new(mock.MockTx)
 
 	// Mock the transactional function to return an error
-	transactionalFunc := func(ctx context.Context, tx util.Tx) (string, error) {
+	transactionalFunc := func(ctx context.Context, tx database.Tx) (string, error) {
 		return "", errors.New("application error")
 	}
 
@@ -59,7 +59,7 @@ func TestExecuteTransaction_FinalizeError(t *testing.T) {
 	mockTx := new(mock.MockTx)
 
 	// Mock the transactional function to return an error
-	transactionalFunc := func(ctx context.Context, tx util.Tx) (string, error) {
+	transactionalFunc := func(ctx context.Context, tx database.Tx) (string, error) {
 		return "", nil
 	}
 

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -14,14 +14,14 @@ type MockDB struct {
 	mock.Mock
 }
 
-var _ util.DB = (*MockDB)(nil)
+var _ database.DB = (*MockDB)(nil)
 
-func (m *MockDB) Prepare(query string) (util.Stmt, error) {
+func (m *MockDB) Prepare(query string) (database.Stmt, error) {
 	args := m.Called(query)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	} else {
-		return args.Get(0).(util.Stmt), args.Error(1)
+		return args.Get(0).(database.Stmt), args.Error(1)
 	}
 }
 
@@ -46,19 +46,19 @@ func (m *MockDB) SetMaxIdleConns(n int) {
 	m.Called(n)
 }
 
-func (m *MockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (util.Tx, error) {
+func (m *MockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (database.Tx, error) {
 	args := m.Called(ctx, opts)
-	return args.Get(0).(util.Tx), args.Error(1)
+	return args.Get(0).(database.Tx), args.Error(1)
 }
 
-func (m *MockDB) Exec(query string, args ...any) (util.Result, error) {
+func (m *MockDB) Exec(query string, args ...any) (database.Result, error) {
 	calledArgs := m.Called(query, args)
-	return calledArgs.Get(0).(util.Result), calledArgs.Error(1)
+	return calledArgs.Get(0).(database.Result), calledArgs.Error(1)
 }
 
-func (m *MockDB) Query(query string, args ...any) (util.Rows, error) {
+func (m *MockDB) Query(query string, args ...any) (database.Rows, error) {
 	calledArgs := m.Called(query, args)
-	return calledArgs.Get(0).(util.Rows), calledArgs.Error(1)
+	return calledArgs.Get(0).(database.Rows), calledArgs.Error(1)
 }
 
 func (m *MockDB) Close() error {
@@ -71,7 +71,7 @@ type MockTx struct {
 	MockDB
 }
 
-var _ util.Tx = (*MockTx)(nil)
+var _ database.Tx = (*MockTx)(nil)
 
 func (m *MockTx) Commit() error {
 	return m.Called().Error(0)
@@ -86,31 +86,31 @@ type MockStmt struct {
 	mock.Mock
 }
 
-var _ util.Stmt = (*MockStmt)(nil)
+var _ database.Stmt = (*MockStmt)(nil)
 
 func (m *MockStmt) Close() error {
 	return m.Called().Error(0)
 }
 
-func (m *MockStmt) QueryRow(args ...any) util.Row {
+func (m *MockStmt) QueryRow(args ...any) database.Row {
 	argsCalled := m.Called(args)
-	return argsCalled.Get(0).(util.Row)
+	return argsCalled.Get(0).(database.Row)
 }
 
-func (m *MockStmt) Exec(args ...any) (util.Result, error) {
+func (m *MockStmt) Exec(args ...any) (database.Result, error) {
 	argsCalled := m.Called(args)
 	if argsCalled.Get(0) == nil {
 		return nil, argsCalled.Error(1)
 	}
-	return argsCalled.Get(0).(util.Result), argsCalled.Error(1)
+	return argsCalled.Get(0).(database.Result), argsCalled.Error(1)
 }
 
-func (m *MockStmt) Query(args ...any) (util.Rows, error) {
+func (m *MockStmt) Query(args ...any) (database.Rows, error) {
 	argsCalled := m.Called(args)
 	if argsCalled.Get(0) == nil {
 		return nil, argsCalled.Error(1)
 	}
-	return argsCalled.Get(0).(util.Rows), argsCalled.Error(1)
+	return argsCalled.Get(0).(database.Rows), argsCalled.Error(1)
 }
 
 // MockRows is a mock implementation of the Rows interface.
@@ -118,7 +118,7 @@ type MockRows struct {
 	mock.Mock
 }
 
-var _ util.Rows = (*MockRows)(nil)
+var _ database.Rows = (*MockRows)(nil)
 
 func (m *MockRows) Scan(dest ...any) error {
 	return m.Called(dest).Error(0)
@@ -142,7 +142,7 @@ type MockRow struct {
 	mock.Mock
 }
 
-var _ util.Row = (*MockRow)(nil)
+var _ database.Row = (*MockRow)(nil)
 
 func (m *MockRow) Scan(dest ...any) error {
 	return m.Called(dest).Error(0)
@@ -157,7 +157,7 @@ type MockResult struct {
 	mock.Mock
 }
 
-var _ util.Result = (*MockResult)(nil)
+var _ database.Result = (*MockResult)(nil)
 
 func (m *MockResult) LastInsertId() (int64, error) {
 	args := m.Called()

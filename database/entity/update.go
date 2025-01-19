@@ -3,8 +3,9 @@ package entity
 import (
 	"database/sql"
 
+	"github.com/pakkasys/fluidapi/database"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
 )
 
 // Update updates entities in the database.
@@ -14,9 +15,9 @@ import (
 //   - selectors: The selectors of the entities to update.
 //   - updates: The updates to apply to the entities.
 func Update(
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
-	selectors []util.Selector,
+	selectors []clause.Selector,
 	updateFields []query.UpdateField,
 	errorChecker ErrorChecker,
 ) (int64, error) {

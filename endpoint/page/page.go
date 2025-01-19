@@ -1,6 +1,10 @@
 package page
 
-import apierror "github.com/pakkasys/fluidapi/core/api/error"
+import (
+	"fmt"
+
+	apierror "github.com/pakkasys/fluidapi/core/api/error"
+)
 
 type MaxPageLimitExceededErrorData struct {
 	MaxLimit int `json:"max_limit"`
@@ -24,4 +28,18 @@ func (p *Page) Validate(maxLimit int) error {
 		)
 	}
 	return nil
+}
+
+// TODO: Implement stringer instead
+// TODO: Create separate database layer for page
+func GetLimitOffsetClauseFromPage(page *Page) string {
+	if page == nil {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"LIMIT %d OFFSET %d",
+		page.Limit,
+		page.Offset,
+	)
 }

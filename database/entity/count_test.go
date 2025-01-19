@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/pakkasys/fluidapi/database/query"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -15,9 +15,9 @@ func TestCount(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockRow *utilmock.MockRow,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockRow *databasemock.MockRow,
 		)
 		tableName     string
 		dbOptions     *query.CountOptions
@@ -27,9 +27,9 @@ func TestCount(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
 				mockStmt.On("Close").Return(nil)
@@ -44,11 +44,12 @@ func TestCount(t *testing.T) {
 		{
 			name: "Prepare Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 			) {
-				mockDB.On("Prepare", mock.Anything).Return(nil, errors.New("prepare error"))
+				mockDB.On("Prepare", mock.Anything).
+					Return(nil, errors.New("prepare error"))
 			},
 			tableName:     "test_table",
 			dbOptions:     &query.CountOptions{},
@@ -58,9 +59,9 @@ func TestCount(t *testing.T) {
 		{
 			name: "QueryRow Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockRow *utilmock.MockRow,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockRow *databasemock.MockRow,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
 				mockStmt.On("Close").Return(nil)
@@ -77,9 +78,9 @@ func TestCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockRow := new(utilmock.MockRow)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockRow := new(databasemock.MockRow)
 			if tt.setupMocks != nil {
 				tt.setupMocks(mockDB, mockStmt, mockRow)
 			}

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/pakkasys/fluidapi/database/clause"
 	entitymock "github.com/pakkasys/fluidapi/database/entity/mock"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,22 +17,22 @@ func TestUpdate(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockResult *utilmock.MockResult,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockResult *databasemock.MockResult,
 			mockErrorChecker *entitymock.MockErrorChecker,
 		)
 		updateFields  []query.UpdateField
-		selectors     []util.Selector
+		selectors     []clause.Selector
 		expectedRows  int64
 		expectedError string
 	}{
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -43,7 +43,7 @@ func TestUpdate(t *testing.T) {
 			updateFields: []query.UpdateField{
 				{Field: "name", Value: "Alice"},
 			},
-			selectors: []util.Selector{
+			selectors: []clause.Selector{
 				{Field: "id", Value: 1},
 			},
 			expectedRows:  2,
@@ -53,16 +53,16 @@ func TestUpdate(t *testing.T) {
 			name:          "No Updates",
 			setupMocks:    nil,
 			updateFields:  []query.UpdateField{},
-			selectors:     []util.Selector{{Field: "id", Value: 1}},
+			selectors:     []clause.Selector{{Field: "id", Value: 1}},
 			expectedRows:  0,
 			expectedError: "",
 		},
 		{
 			name: "Exec Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -73,7 +73,7 @@ func TestUpdate(t *testing.T) {
 			updateFields: []query.UpdateField{
 				{Field: "name", Value: "Alice"},
 			},
-			selectors: []util.Selector{
+			selectors: []clause.Selector{
 				{Field: "id", Value: 1},
 			},
 			expectedRows:  0,
@@ -83,9 +83,9 @@ func TestUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockResult := new(utilmock.MockResult)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockResult := new(databasemock.MockResult)
 			mockErrorChecker := new(entitymock.MockErrorChecker)
 
 			if tt.setupMocks != nil {
@@ -123,7 +123,7 @@ func TestCheckUpdateResult(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockResult *utilmock.MockResult,
+			mockResult *databasemock.MockResult,
 			mockErrorChecker *entitymock.MockErrorChecker,
 		)
 		inputErr      error
@@ -133,7 +133,7 @@ func TestCheckUpdateResult(t *testing.T) {
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockResult *utilmock.MockResult,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockResult.On("RowsAffected").Return(int64(3), nil)
@@ -145,7 +145,7 @@ func TestCheckUpdateResult(t *testing.T) {
 		{
 			name: "Exec Error",
 			setupMocks: func(
-				mockResult *utilmock.MockResult,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockErrorChecker.On("Check", errors.New("exec error")).
@@ -158,7 +158,7 @@ func TestCheckUpdateResult(t *testing.T) {
 		{
 			name: "RowsAffected Error",
 			setupMocks: func(
-				mockResult *utilmock.MockResult,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockResult.On("RowsAffected").
@@ -172,7 +172,7 @@ func TestCheckUpdateResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockResult := new(utilmock.MockResult)
+			mockResult := new(databasemock.MockResult)
 			mockErrorChecker := new(entitymock.MockErrorChecker)
 
 			if tt.setupMocks != nil {

@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,7 +13,7 @@ func TestUpdateQuery_SingleUpdate(t *testing.T) {
 	updates := []UpdateField{
 		{Field: "name", Value: "Alice"},
 	}
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
@@ -33,7 +33,7 @@ func TestUpdateQuery_MultipleUpdates(t *testing.T) {
 		{Field: "name", Value: "Alice"},
 		{Field: "age", Value: 30},
 	}
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
@@ -49,7 +49,7 @@ func TestUpdateQuery_MultipleUpdates(t *testing.T) {
 // TestUpdateQuery_NoUpdates tests the case where no updates are provided.
 func TestUpdateQuery_NoUpdates(t *testing.T) {
 	updates := []UpdateField{}
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "user", Field: "id", Predicate: "=", Value: 1},
 	}
 
@@ -68,7 +68,7 @@ func TestUpdateQuery_NoSelectors(t *testing.T) {
 		{Field: "name", Value: "Alice"},
 	}
 
-	selectors := []util.Selector{} // No selectors
+	selectors := []clause.Selector{} // No selectors
 
 	query, values := UpdateQuery("user", updates, selectors)
 
@@ -85,7 +85,7 @@ func TestUpdateQuery_EmptyFields(t *testing.T) {
 	updates := []UpdateField{
 		{Field: "", Value: "Unknown"},
 	}
-	selectors := []util.Selector{
+	selectors := []clause.Selector{
 		{Table: "", Field: "", Predicate: "=", Value: nil},
 	}
 

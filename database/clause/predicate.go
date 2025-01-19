@@ -1,6 +1,6 @@
-package util
+package clause
 
-// Predicate represents the predicate of a selector.
+// Predicate represents the predicate of a database selector.
 type Predicate string
 
 const (

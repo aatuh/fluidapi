@@ -3,8 +3,9 @@ package entity
 import (
 	"fmt"
 
+	"github.com/pakkasys/fluidapi/database"
+	"github.com/pakkasys/fluidapi/database/clause"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
 )
 
 // Upsert upserts an entity.
@@ -15,11 +16,11 @@ import (
 //   - insertedValues: The function used to get the columns and values to insert.
 //   - updateProjections: The projections of the entity to update.
 func Upsert[T any](
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
 	entity *T,
 	insertedValues query.InsertedValues[*T],
-	updateProjections []util.Projection,
+	updateProjections []clause.Projection,
 	errorChecker ErrorChecker,
 ) (int64, error) {
 	return UpsertMany(
@@ -40,11 +41,11 @@ func Upsert[T any](
 //   - insertedValues: The function used to get the columns and values to insert.
 //   - updateProjections: The projections of the entities to update.
 func UpsertMany[T any](
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
 	entities []*T,
 	insertedValues query.InsertedValues[*T],
-	updateProjections []util.Projection,
+	updateProjections []clause.Projection,
 	errorChecker ErrorChecker,
 ) (int64, error) {
 	if len(entities) == 0 {

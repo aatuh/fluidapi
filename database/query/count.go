@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pakkasys/fluidapi/database/util"
+	"github.com/pakkasys/fluidapi/database/clause"
 )
 
 // CountOptions is the options struct used for count queries.
 type CountOptions struct {
-	Selectors []util.Selector
-	Joins     []util.Join
+	Selectors []clause.Selector
+	Joins     []clause.Join
 }
 
 // Count returns a count query.

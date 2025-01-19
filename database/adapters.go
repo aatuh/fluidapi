@@ -1,4 +1,4 @@
-package util
+package database
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func NewSQLDB(driver string, dsn string) (DB, error) {
 	return &SQLDB{DB: db}, nil
 }
 
-// SQLDB wraps *sql.DB to implement DBInterface.
+// SQLDB wraps *sql.DB to implement DB interface.
 type SQLDB struct {
 	*sql.DB
 }

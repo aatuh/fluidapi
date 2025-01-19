@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/pakkasys/fluidapi/database/clause"
 	entitymock "github.com/pakkasys/fluidapi/database/entity/mock"
-	"github.com/pakkasys/fluidapi/database/util"
-	utilmock "github.com/pakkasys/fluidapi/database/util/mock"
+	databasemock "github.com/pakkasys/fluidapi/database/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -21,9 +21,9 @@ func TestUpsert(t *testing.T) {
 	// Use TestUpsertMany to cover functionality since Upsert is a wrapper
 	// that delegates to UpsertMany.
 	t.Run("Delegates to UpsertMany", func(t *testing.T) {
-		mockDB := new(utilmock.MockDB)
-		mockStmt := new(utilmock.MockStmt)
-		mockResult := new(utilmock.MockResult)
+		mockDB := new(databasemock.MockDB)
+		mockStmt := new(databasemock.MockStmt)
+		mockResult := new(databasemock.MockResult)
 		mockErrorChecker := new(entitymock.MockErrorChecker)
 
 		mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -40,7 +40,7 @@ func TestUpsert(t *testing.T) {
 			"user_table",
 			&UpsertTestStruct{ID: 1, Name: "Alice"},
 			inserter,
-			[]util.Projection{{Table: "name", Alias: "name_alias"}},
+			[]clause.Projection{{Table: "name", Alias: "name_alias"}},
 			mockErrorChecker,
 		)
 
@@ -59,22 +59,22 @@ func TestUpsertMany(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupMocks func(
-			mockDB *utilmock.MockDB,
-			mockStmt *utilmock.MockStmt,
-			mockResult *utilmock.MockResult,
+			mockDB *databasemock.MockDB,
+			mockStmt *databasemock.MockStmt,
+			mockResult *databasemock.MockResult,
 			mockErrorChecker *entitymock.MockErrorChecker,
 		)
 		entities          []*UpsertTestStruct
-		updateProjections []util.Projection
+		updateProjections []clause.Projection
 		expectedID        int64
 		expectedError     string
 	}{
 		{
 			name: "Normal Operation",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -85,7 +85,7 @@ func TestUpsertMany(t *testing.T) {
 			entities: []*UpsertTestStruct{
 				{ID: 1, Name: "Alice"},
 			},
-			updateProjections: []util.Projection{
+			updateProjections: []clause.Projection{
 				{Table: "name", Alias: "name_alias"},
 			},
 			expectedID:    1,
@@ -95,7 +95,7 @@ func TestUpsertMany(t *testing.T) {
 			name:       "No Entities",
 			setupMocks: nil,
 			entities:   []*UpsertTestStruct{},
-			updateProjections: []util.Projection{
+			updateProjections: []clause.Projection{
 				{Table: "name", Alias: "name_alias"},
 			},
 			expectedID:    0,
@@ -107,7 +107,7 @@ func TestUpsertMany(t *testing.T) {
 			entities: []*UpsertTestStruct{
 				{ID: 1, Name: "Alice"},
 			},
-			updateProjections: []util.Projection{},
+			updateProjections: []clause.Projection{},
 			expectedID:        0,
 			expectedError:     "must provide update projections",
 		},
@@ -117,7 +117,7 @@ func TestUpsertMany(t *testing.T) {
 			entities: []*UpsertTestStruct{
 				{ID: 1, Name: "Alice"},
 			},
-			updateProjections: []util.Projection{
+			updateProjections: []clause.Projection{
 				{Table: "name", Alias: ""},
 			},
 			expectedID:    0,
@@ -126,9 +126,9 @@ func TestUpsertMany(t *testing.T) {
 		{
 			name: "Exec Error",
 			setupMocks: func(
-				mockDB *utilmock.MockDB,
-				mockStmt *utilmock.MockStmt,
-				mockResult *utilmock.MockResult,
+				mockDB *databasemock.MockDB,
+				mockStmt *databasemock.MockStmt,
+				mockResult *databasemock.MockResult,
 				mockErrorChecker *entitymock.MockErrorChecker,
 			) {
 				mockDB.On("Prepare", mock.Anything).Return(mockStmt, nil)
@@ -139,7 +139,7 @@ func TestUpsertMany(t *testing.T) {
 			entities: []*UpsertTestStruct{
 				{ID: 1, Name: "Alice"},
 			},
-			updateProjections: []util.Projection{
+			updateProjections: []clause.Projection{
 				{Table: "name", Alias: "name_alias"},
 			},
 			expectedID:    0,
@@ -149,9 +149,9 @@ func TestUpsertMany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockDB := new(utilmock.MockDB)
-			mockStmt := new(utilmock.MockStmt)
-			mockResult := new(utilmock.MockResult)
+			mockDB := new(databasemock.MockDB)
+			mockStmt := new(databasemock.MockStmt)
+			mockResult := new(databasemock.MockResult)
 			mockErrorChecker := new(entitymock.MockErrorChecker)
 
 			if tt.setupMocks != nil {

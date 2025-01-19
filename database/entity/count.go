@@ -1,8 +1,8 @@
 package entity
 
 import (
+	"github.com/pakkasys/fluidapi/database"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
 )
 
 // Count counts the number of entities in the database.
@@ -11,7 +11,7 @@ import (
 //   - tableName: The name of the database table.
 //   - dbOptions: The options for the query.
 func Count(
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
 	dbOptions *query.CountOptions,
 ) (int, error) {

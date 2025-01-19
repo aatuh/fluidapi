@@ -3,8 +3,8 @@ package entity
 import (
 	"database/sql"
 
+	"github.com/pakkasys/fluidapi/database"
 	"github.com/pakkasys/fluidapi/database/query"
-	"github.com/pakkasys/fluidapi/database/util"
 )
 
 // Insert creates an entity in the database.
@@ -15,7 +15,7 @@ import (
 //   - inserter: The function used to get the columns and values to insert.
 func Insert[T any](
 	entity *T,
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
 	inserter query.InsertedValues[*T],
 	errorChecker ErrorChecker,
@@ -33,7 +33,7 @@ func Insert[T any](
 //   - inserter: The function used to get the columns and values to insert.
 func InsertMany[T any](
 	entities []*T,
-	preparer util.Preparer,
+	preparer database.Preparer,
 	tableName string,
 	inserter query.InsertedValues[*T],
 	errorChecker ErrorChecker,
