@@ -2,30 +2,43 @@ package endpoint
 
 import (
 	"fmt"
-	"slices"
+	"strings"
 
 	"github.com/pakkasys/fluidapi/core"
 	"github.com/pakkasys/fluidapi/database"
 )
 
 type Predicate string
+
+func (p Predicate) String() string {
+	return string(p)
+}
+
 type Predicates []Predicate
+
+func (p Predicates) String() string {
+	str := make([]string, len(p))
+	for i, predicate := range p {
+		str[i] = predicate.String()
+	}
+	return strings.Join(str, ",")
+}
 
 const (
 	GREATER                Predicate = ">"
-	GREATER_SHORT          Predicate = "GT"
+	GREATER_SHORT          Predicate = "gt"
 	GREATER_OR_EQUAL       Predicate = ">="
-	GREATER_OR_EQUAL_SHORT Predicate = "GE"
+	GREATER_OR_EQUAL_SHORT Predicate = "ge"
 	EQUAL                  Predicate = "="
-	EQUAL_SHORT            Predicate = "EQ"
+	EQUAL_SHORT            Predicate = "eq"
 	NOT_EQUAL              Predicate = "!="
-	NOT_EQUAL_SHORT        Predicate = "NE"
+	NOT_EQUAL_SHORT        Predicate = "ne"
 	LESS                   Predicate = "<"
 	LESS_SHORT             Predicate = "LT"
 	LESS_OR_EQUAL          Predicate = "<="
-	LESS_OR_EQUAL_SHORT    Predicate = "LE"
-	IN                     Predicate = "IN"
-	NOT_IN                 Predicate = "NOT_IN"
+	LESS_OR_EQUAL_SHORT    Predicate = "le"
+	IN                     Predicate = "in"
+	NOT_IN                 Predicate = "not_in"
 )
 
 var ToDBPredicates = map[Predicate]database.Predicate{
@@ -155,14 +168,11 @@ func (d Definitions) ToEndpoints() []core.Endpoint {
 			middlewares = append(middlewares, mw.Middleware)
 		}
 
-		endpoints = append(
-			endpoints,
-			core.Endpoint{
-				URL:         definition.URL,
-				Method:      definition.Method,
-				Middlewares: middlewares,
-			},
-		)
+		endpoints = append(endpoints, core.Endpoint{
+			URL:         definition.URL,
+			Method:      definition.Method,
+			Middlewares: middlewares,
+		})
 	}
 
 	return endpoints
@@ -182,20 +192,8 @@ var MaxPageLimitExceededError = core.NewAPIError("MAX_PAGE_LIMIT_EXCEEDED")
 
 // Page represents a pagination input.
 type Page struct {
-	Offset int `json:"offset" validate:"min=0"`
-	Limit  int `json:"limit" validate:"min=0"`
-}
-
-// Validate validates the input page.
-func (p *Page) Validate(maxLimit int) error {
-	if p.Limit > maxLimit {
-		return MaxPageLimitExceededError.WithData(
-			MaxPageLimitExceededErrorData{
-				MaxLimit: maxLimit,
-			},
-		)
-	}
-	return nil
+	Offset int `json:"offset"`
+	Limit  int `json:"limit"`
 }
 
 func (p *Page) ToDBPage() *database.Page {
@@ -217,50 +215,38 @@ var InvalidOrderFieldError = core.NewAPIError("INVALID_ORDER_FIELD")
 // OrderDirection is used to specify the direction of the order.
 type OrderDirection string
 
+// String returns the string representation of the order direction.
+func (o OrderDirection) String() string {
+	return string(o)
+}
+
 const (
-	DIRECTION_ASC        OrderDirection = "ASC"
-	DIRECTION_ASCENDING  OrderDirection = "ASCENDING"
-	DIRECTION_DESC       OrderDirection = "DESC"
-	DIRECTION_DESCENDING OrderDirection = "DESCENDING"
+	DirectionAsc        OrderDirection = "asc"
+	DirectionAscending  OrderDirection = "ascending"
+	DirectionDesc       OrderDirection = "desc"
+	DirectionDescending OrderDirection = "descending"
 )
 
-// Directions is a list of all possible order directions.
-var Directions []OrderDirection = []OrderDirection{
-	DIRECTION_ASC,
-	DIRECTION_ASCENDING,
-	DIRECTION_DESC,
-	DIRECTION_DESCENDING,
+// DirectionsToDB is a map of order directions to database order directions.
+var DirectionsToDB = map[OrderDirection]database.OrderDirection{
+	DirectionAsc:        database.OrderAsc,
+	DirectionAscending:  database.OrderAsc,
+	DirectionDesc:       database.OrderDesc,
+	DirectionDescending: database.OrderDesc,
 }
 
-// DirectionDatabaseTranslations is a map of order directions to database
-// order directions.
-var DirectionDatabaseTranslations = map[OrderDirection]database.OrderDirection{
-	DIRECTION_ASC:        database.OrderAsc,
-	DIRECTION_ASCENDING:  database.OrderAsc,
-	DIRECTION_DESC:       database.OrderDesc,
-	DIRECTION_DESCENDING: database.OrderDesc,
-}
+type Orders map[string]OrderDirection
 
-// Order is used to specify the order of the result set.
-type Order struct {
-	Field     string         `json:"field"`
-	Direction OrderDirection `json:"direction"`
-}
-
-type Orders []Order
-
-// ValidateAndTranslateToDBOrders validates and translates the provided
-// orders into database orders.
+// TranslateToDBOrders translates the provided orders into database orders.
 // It also returns an error if any of the orders are invalid.
 //
-//   - orders: The list of orders to validate and translate.
+//   - orders: The list of orders to translate.
 //   - allowedOrderFields: The list of allowed order fields.
 //   - apiToDBFieldMap: The mapping of API field names to database field names.
-func (o Orders) ValidateAndTranslateToDBOrders(
-	allowedOrderFields []string,
+func (o Orders) TranslateToDBOrders(
 	apiToDBFieldMap map[string]DBField,
 ) ([]database.Order, error) {
-	newOrders, err := o.ValidateAndDeduplicateOrders(allowedOrderFields)
+	newOrders, err := o.Dedup()
 	if err != nil {
 		return nil, err
 	}
@@ -273,31 +259,22 @@ func (o Orders) ValidateAndTranslateToDBOrders(
 	return dbOrders, nil
 }
 
-// ValidateAndDeduplicateOrders validates and deduplicates the provided orders.
+// Dedup deduplicates the provided orders.
 // It returns a new list of orders with no duplicates.
 // It also returns an error if any of the orders are invalid.
-//
-//   - allowedOrderFields: The list of allowed order fields.
-func (o Orders) ValidateAndDeduplicateOrders(
-	allowedOrderFields []string,
-) (Orders, error) {
-	newOrders := []Order{}
-	addedFields := make(map[string]bool)
+func (o Orders) Dedup() (Orders, error) {
+	dedup := map[string]OrderDirection{}
+	existing := make(map[string]bool)
 
-	for i := range o {
-		order := o[i]
-
-		if err := order.validate(allowedOrderFields); err != nil {
-			return nil, err
-		}
-
-		if !addedFields[order.Field] {
-			newOrders = append(newOrders, order)
-			addedFields[order.Field] = true
+	for field := range o {
+		order := o[field]
+		if !existing[field] {
+			dedup[field] = order
+			existing[field] = true
 		}
 	}
 
-	return newOrders, nil
+	return dedup, nil
 }
 
 // ToDBOrders translates the provided orders into database orders.
@@ -307,57 +284,32 @@ func (o Orders) ValidateAndDeduplicateOrders(
 func (o Orders) ToDBOrders(
 	apiToDBFieldMap map[string]DBField,
 ) ([]database.Order, error) {
-	newOrders := []database.Order{}
+	dbOrders := []database.Order{}
 
-	for i := range o {
-		order := o[i]
+	for field, direction := range o {
+		translatedField := apiToDBFieldMap[field]
 
-		translatedField := apiToDBFieldMap[order.Field]
-
-		// Translate column
+		// Translate field.
 		dbColumn := translatedField.Column
 		if dbColumn == "" {
-			return nil, InvalidOrderFieldError.WithData(
-				InvalidOrderFieldErrorData{
-					Field: order.Field,
-				},
-			)
+			return nil, InvalidOrderFieldError.
+				WithData(
+					InvalidOrderFieldErrorData{Field: field},
+				).
+				WithMessage(fmt.Sprintf(
+					"cannot translate field: %s", field,
+				))
 		}
-		order.Field = dbColumn
 
-		newOrders = append(
-			newOrders,
-			database.Order{
-				Table:     translatedField.Table,
-				Field:     order.Field,
-				Direction: DirectionDatabaseTranslations[order.Direction],
-			},
-		)
+		lowerDir := OrderDirection(strings.ToLower(string(direction)))
+		dbOrders = append(dbOrders, database.Order{
+			Table:     translatedField.Table,
+			Field:     dbColumn,
+			Direction: DirectionsToDB[lowerDir],
+		})
 	}
 
-	return newOrders, nil
-}
-
-func (o *Order) validate(allowedOrderFields []string) error {
-	// Check that the order direction is valid
-	if !slices.Contains(Directions, o.Direction) {
-		return InvalidOrderFieldError.WithData(
-			InvalidOrderFieldErrorData{
-				Field: o.Field,
-			},
-		)
-	}
-
-	// Check that the order field is allowed
-	if !slices.Contains(allowedOrderFields, o.Field) {
-		return InvalidOrderFieldError.WithData(
-			InvalidOrderFieldErrorData{
-				Field: o.Field,
-			},
-		)
-	}
-
-	return nil
+	return dbOrders, nil
 }
 
 type InvalidDatabaseSelectorTranslationErrorData struct {
@@ -387,14 +339,8 @@ var PredicateNotAllowedError = core.NewAPIError("PREDICATE_NOT_ALLOWED")
 // Selector represents a data selector that specifies criteria for filtering
 // data based on fields, predicates, and values.
 type Selector struct {
-	// Predicates allowed for this selector
-	AllowedPredicates []Predicate
-	// The name of the field being filtered
-	Field string
-	// The predicate for filtering
-	Predicate Predicate
-	// The value to filter by
-	Value any
+	Predicate Predicate `json:"predicate"` // The predicate to use.
+	Value     any       `json:"value"`     // The value to filter on.
 }
 
 // String returns a string representation of the selector.
@@ -403,38 +349,17 @@ type Selector struct {
 // Returns:
 // - A formatted string showing the field, predicate, and value.
 func (s Selector) String() string {
-	return fmt.Sprintf("%s %s %v", s.Field, s.Predicate, s.Value)
+	return fmt.Sprintf("%s %v", s.Predicate, s.Value)
 }
 
 // Selectors represents a collection of selectors used for filtering data.
-type Selectors []Selector
-
-// GetByFields returns all selectors that match the given fields.
-//
-// Parameters:
-// - fields: The fields to search for in the selectors.
-//
-// Returns:
-// - A slice of selectors that match the provided field names.
-func (s Selectors) GetByFields(fields ...string) []Selector {
-	selectors := Selectors{}
-	for f := range fields {
-		for j := range s {
-			if s[j].Field == fields[f] {
-				selectors = append(selectors, s[j])
-			}
-		}
-	}
-	return selectors
-}
+// It is a map where the key is the field name and the value is the selector.
+type Selectors map[string]Selector
 
 // ToDBSelectors converts a slice of API-level selectors to database selectors.
-// It validates predicates and translates the fields and predicates for use with
-// the database.
 //
+// Selectors
 // Parameters:
-//   - selectors: A slice of API-level selectors that specify the criteria for
-//     selecting data.
 //   - apiToDBFieldMap: A map translating API field names to their corresponding
 //     database field definitions.
 //
@@ -443,51 +368,45 @@ func (s Selectors) GetByFields(fields ...string) []Selector {
 //     selectors.
 //   - An error if any validation fails, such as invalid predicates or unknown
 //     fields.
-func (selectors Selectors) ToDBSelectors(
+func (s Selectors) ToDBSelectors(
 	apiToDBFieldMap map[string]DBField,
 ) ([]database.Selector, error) {
 	var databaseSelectors []database.Selector
 
-	for i := range selectors {
-		selector := selectors[i]
+	for field := range s {
+		selector := s[field]
 
-		// Validate the input predicate
-		if !slices.Contains(
-			selector.AllowedPredicates,
-			selector.Predicate,
-		) {
-			return nil, PredicateNotAllowedError.WithData(
-				PredicateNotAllowedErrorData{Predicate: selector.Predicate},
-			)
-		}
-
-		// Translate the predicate
-		dbPredicate, ok := ToDBPredicates[selector.Predicate]
+		// Translate the predicate.
+		lowerPredicate := Predicate(strings.ToLower(string(selector.Predicate)))
+		dbPredicate, ok := ToDBPredicates[lowerPredicate]
 		if !ok {
-			return nil, InvalidPredicateError.WithData(
-				InvalidPredicateErrorData{Predicate: selector.Predicate},
-			)
+			return nil, InvalidPredicateError.
+				WithData(
+					InvalidPredicateErrorData{Predicate: selector.Predicate},
+				).
+				WithMessage(fmt.Sprintf(
+					"cannot translate predicate: %s", selector.Predicate,
+				))
 		}
 
-		// Translate the field
-		dbField, ok := apiToDBFieldMap[selector.Field]
+		// Translate the field.
+		dbField, ok := apiToDBFieldMap[field]
 		if !ok {
-			return nil, InvalidDatabaseSelectorTranslationError.WithData(
-				InvalidDatabaseSelectorTranslationErrorData{
-					Field: selector.Field,
-				},
-			)
+			return nil, InvalidDatabaseSelectorTranslationError.
+				WithData(
+					InvalidDatabaseSelectorTranslationErrorData{Field: field},
+				).
+				WithMessage(fmt.Sprintf(
+					"cannot translate field: %s", field,
+				))
 		}
 
-		databaseSelectors = append(
-			databaseSelectors,
-			database.Selector{
-				Table:     dbField.Table,
-				Field:     dbField.Column,
-				Predicate: dbPredicate,
-				Value:     selector.Value,
-			},
-		)
+		databaseSelectors = append(databaseSelectors, database.Selector{
+			Table:     dbField.Table,
+			Field:     dbField.Column,
+			Predicate: dbPredicate,
+			Value:     selector.Value,
+		})
 	}
 
 	return databaseSelectors, nil
@@ -499,25 +418,7 @@ type InvalidDatabaseUpdateTranslationErrorData struct {
 
 var InvalidDatabaseUpdateTranslationError = core.NewAPIError("INVALID_DATABASE_UPDATE_TRANSLATION")
 
-// Update represents a data update with a field and a value.
-type Update struct {
-	Field string // The field to be updated
-	Value any    // The new value for the field
-}
-
-type Updates []Update
-
-// GetByField returns update with the given field.
-//
-//   - field: the field to search for
-func (u Updates) GetByField(field string) *Update {
-	for j := range u {
-		if u[j].Field == field {
-			return &u[j]
-		}
-	}
-	return nil
-}
+type Updates map[string]any
 
 // ToDBUpdates translates a list of updates to a database update list
 // and returns an error if the translation fails.
@@ -534,26 +435,25 @@ func (updates Updates) ToDBUpdates(
 ) ([]database.UpdateField, error) {
 	var dbUpdates []database.UpdateField
 
-	for i := range updates {
-		matchedUpdate := updates[i]
+	for field := range updates {
+		value := updates[field]
 
-		// Translate the field
-		dbField, ok := apiToDBFieldMap[matchedUpdate.Field]
+		// Translate the field.
+		dbField, ok := apiToDBFieldMap[field]
 		if !ok {
-			return nil, InvalidDatabaseUpdateTranslationError.WithData(
-				InvalidDatabaseUpdateTranslationErrorData{
-					Field: matchedUpdate.Field,
-				},
-			)
+			return nil, InvalidDatabaseUpdateTranslationError.
+				WithData(
+					InvalidDatabaseUpdateTranslationErrorData{Field: field},
+				).
+				WithMessage(fmt.Sprintf(
+					"cannot translate field: %s", field,
+				))
 		}
 
-		dbUpdates = append(
-			dbUpdates,
-			database.UpdateField{
-				Field: dbField.Column,
-				Value: matchedUpdate.Value,
-			},
-		)
+		dbUpdates = append(dbUpdates, database.UpdateField{
+			Field: dbField.Column,
+			Value: value,
+		})
 	}
 
 	return dbUpdates, nil
@@ -600,10 +500,7 @@ func (s *Stack) InsertAfterID(id string, wrapper Wrapper) bool {
 			} else {
 				*s = append(
 					(*s)[:i+1],
-					append(
-						[]Wrapper{wrapper},
-						(*s)[i+1:]...,
-					)...,
+					append([]Wrapper{wrapper}, (*s)[i+1:]...)...,
 				)
 			}
 			return true

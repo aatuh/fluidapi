@@ -17,7 +17,7 @@ func TestNew(t *testing.T) {
 // TestError tests the Error method of the generic Error type.
 func TestError(t *testing.T) {
 	data := ""
-	err := APIError{ID_: "test_error", Data_: data, Message_: nil}
+	err := APIError{ID: "test_error", Data: data, Message: nil}
 
 	assert.Equal(t, "test_error", err.Error(), "Expected 'test_error'")
 }
@@ -61,9 +61,9 @@ func TestErrorFunc(t *testing.T) {
 	data := ""
 	message := "Something went wrong"
 	err := APIError{
-		ID_:      "test_error",
-		Data_:    data,
-		Message_: &message,
+		ID:      "test_error",
+		Data:    data,
+		Message: &message,
 	}
 
 	assert.Equal(

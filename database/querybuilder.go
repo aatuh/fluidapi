@@ -16,6 +16,7 @@ type GetOptions struct {
 // CountOptions is used for count queries.
 type CountOptions struct {
 	Selectors Selectors
+	Page      *Page
 	Joins     Joins
 }
 

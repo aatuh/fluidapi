@@ -15,8 +15,8 @@ import (
 // ValidateAndTranslateToDBOrders function
 func TestValidateAndTranslateToDBOrders_ValidInput(t *testing.T) {
 	orders := []Order{
-		{Field: "name", Direction: DIRECTION_ASC},
-		{Field: "age", Direction: DIRECTION_DESC},
+		{Field: "name", Direction: DirectionAsc},
+		{Field: "age", Direction: DirectionDesc},
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -45,7 +45,7 @@ func TestValidateAndTranslateToDBOrders_ValidInput(t *testing.T) {
 // an invalid field is passed in
 func TestValidateAndTranslateToDBOrders_InvalidField(t *testing.T) {
 	orders := []Order{
-		{Field: "invalid_field", Direction: DIRECTION_ASC},
+		{Field: "invalid_field", Direction: DirectionAsc},
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -99,7 +99,7 @@ func TestValidateAndTranslateToDBOrders_InvalidDirection(t *testing.T) {
 // a field not in the translation map is passed in
 func TestValidateAndTranslateToDBOrders_FieldNotInTranslationMap(t *testing.T) {
 	orders := []Order{
-		{Field: "name", Direction: DIRECTION_ASC},
+		{Field: "name", Direction: DirectionAsc},
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -126,8 +126,8 @@ func TestValidateAndTranslateToDBOrders_FieldNotInTranslationMap(t *testing.T) {
 // valid orders are passed in
 func TestToDBOrders_ValidOrders(t *testing.T) {
 	orders := []Order{
-		{Field: "name", Direction: DIRECTION_ASC},
-		{Field: "age", Direction: DIRECTION_DESC},
+		{Field: "name", Direction: DirectionAsc},
+		{Field: "age", Direction: DirectionDesc},
 	}
 
 	fieldTranslations := map[string]DBField{
@@ -151,7 +151,7 @@ func TestToDBOrders_ValidOrders(t *testing.T) {
 // an invalid field is passed in
 func TestToDBOrders_InvalidField(t *testing.T) {
 	orders := []Order{
-		{Field: "invalid_field", Direction: DIRECTION_ASC},
+		{Field: "invalid_field", Direction: DirectionAsc},
 	}
 
 	fieldTranslations := map[string]DBField{
@@ -173,8 +173,8 @@ func TestToDBOrders_InvalidField(t *testing.T) {
 // function with valid input.
 func TestValidateAndDeduplicateOrders_ValidInput(t *testing.T) {
 	orders := []Order{
-		{Field: "name", Direction: DIRECTION_ASC},
-		{Field: "age", Direction: DIRECTION_DESC},
+		{Field: "name", Direction: DirectionAsc},
+		{Field: "age", Direction: DirectionDesc},
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -190,9 +190,9 @@ func TestValidateAndDeduplicateOrders_ValidInput(t *testing.T) {
 // duplicate fields are provided.
 func TestValidateAndDeduplicateOrders_DuplicateFields(t *testing.T) {
 	orders := []Order{
-		{Field: "name", Direction: DIRECTION_ASC},
-		{Field: "name", Direction: DIRECTION_DESC},
-		{Field: "age", Direction: DIRECTION_ASC},
+		{Field: "name", Direction: DirectionAsc},
+		{Field: "name", Direction: DirectionDesc},
+		{Field: "age", Direction: DirectionAsc},
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -228,7 +228,7 @@ func TestValidateAndDeduplicateOrders_InvalidDirection(t *testing.T) {
 // invalid field is provided.
 func TestValidateAndDeduplicateOrders_InvalidField(t *testing.T) {
 	orders := []Order{
-		{Field: "invalid_field", Direction: DIRECTION_ASC},
+		{Field: "invalid_field", Direction: DirectionAsc},
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -259,7 +259,7 @@ func TestValidateAndDeduplicateOrders_EmptyOrders(t *testing.T) {
 func TestValidate_ValidOrder(t *testing.T) {
 	order := Order{
 		Field:     "name",
-		Direction: DIRECTION_ASC,
+		Direction: DirectionAsc,
 	}
 
 	allowedFields := []string{"name", "age", "email"}
@@ -292,7 +292,7 @@ func TestValidate_InvalidDirection(t *testing.T) {
 func TestValidate_InvalidField(t *testing.T) {
 	order := Order{
 		Field:     "invalid_field",
-		Direction: DIRECTION_ASC,
+		Direction: DirectionAsc,
 	}
 
 	allowedFields := []string{"name", "age", "email"}

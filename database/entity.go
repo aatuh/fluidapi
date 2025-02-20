@@ -40,11 +40,11 @@ func Insert(
 	queryBuilder QueryBuilder,
 	errorChecker ErrorChecker,
 ) (int64, error) {
-	q, values := queryBuilder.Insert(
+	query, values := queryBuilder.Insert(
 		inserter.TableName(),
 		inserter.InsertedValues,
 	)
-	result, err := Exec(preparer, q, values)
+	result, err := Exec(preparer, query, values)
 	return checkInsertResult(result, err, errorChecker)
 }
 
@@ -127,7 +127,7 @@ func Get[T Getter](
 		factoryFn().TableName(),
 		dbOptions,
 	)
-	entity, err := querySingle[T](preparer, queryStr, whereValues, factoryFn)
+	entity, err := querySingle(preparer, queryStr, whereValues, factoryFn)
 	return entity, errorChecker.Check(err)
 }
 
@@ -149,7 +149,7 @@ func GetMany[T Getter](
 		factoryFn().TableName(),
 		dbOptions,
 	)
-	entities, err := queryMultiple[T](
+	entities, err := queryMultiple(
 		preparer,
 		queryStr,
 		whereValues,
@@ -164,9 +164,10 @@ func GetMany[T Getter](
 //   - tableName: The name of the database table.
 //   - queryBuilder: The query builder.
 //   - dbOptions: The options for the query.
-func Count[T TableNamer](
+func Count[T Getter](
 	preparer Preparer,
 	dbOptions *CountOptions,
+	factoryFn func() T,
 	queryBuilder QueryBuilder,
 ) (int, error) {
 	obj := *new(T)
