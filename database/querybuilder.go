@@ -1,8 +1,5 @@
 package database
 
-// InsertedValues returns the columns and values to insert.
-type InsertedValues func() (columns []string, values []any)
-
 // GetOptions is used for get queries.
 type GetOptions struct {
 	Selectors   Selectors
@@ -46,48 +43,38 @@ type TableOptions struct {
 	Collate string // e.g. "utf8mb4_bin"
 }
 
-// QueryBuilder defines an interface for generating SQL queries.
-// This interface abstracts all query-generation logic.
-// In all methods an error is returned if the query generation failed but in
-// case the query is not supported, an empty string is returned without error.
+// InsertedValuesFn defines a function that returns column names and values for an insert.
+// This allows deferred evaluation of values and consistent ordering of parameters.
+type InsertedValuesFn func() ([]string, []any)
+
+// QueryBuilder defines an interface for building SQL queries dynamically.
+// Implementations handle specifics for different SQL dialects (e.g., placeholders).
 type QueryBuilder interface {
-	Insert(tableName string, insertedValues InsertedValues) (string, []any)
-	InsertMany(
-		tableName string,
-		insertedValues []InsertedValues,
-	) (string, []any)
-	UpsertMany(
-		tableName string,
-		insertedValues []InsertedValues,
-		updateProjections []Projection,
-	) (string, []any)
-	Get(tableName string, options *GetOptions) (string, []any)
-	Count(tableName string, options *CountOptions) (string, []any)
-	UpdateQuery(
-		tableName string,
-		updateFields []UpdateField,
-		selectors []Selector,
-	) (string, []any)
-	Delete(
-		tableName string,
-		selectors []Selector,
-		opts *DeleteOptions,
-	) (string, []any)
-	CreateDatabaseQuery(
-		dbName string,
-		ifNotExists bool,
-		charset string,
-		collate string,
-	) (string, []any, error)
-	CreateTableQuery(
-		tableName string,
-		ifNotExists bool,
-		columns []ColumnDefinition,
-		constraints []string,
-		options TableOptions,
-	) (string, []any, error)
+	// Insert builds an INSERT statement for a single row.
+	// The insertedValuesFunc should produce the column names and values for the row.
+	Insert(table string, insertedValuesFunc InsertedValuesFn) (query string, params []any)
+	// InsertMany builds a batch INSERT for multiple rows.
+	InsertMany(table string, valuesFuncs []InsertedValuesFn) (query string, params []any)
+	// UpsertMany builds an UPSERT (insert or update) statement for multiple rows.
+	UpsertMany(table string, valuesFuncs []InsertedValuesFn, updateProjections []Projection) (query string, params []any)
+	// Get builds a SELECT statement with optional filtering, ordering, and limits.
+	Get(table string, options *GetOptions) (query string, params []any)
+	// Count builds a SELECT COUNT(*) statement with optional filters.
+	Count(table string, options *CountOptions) (query string, params []any)
+	// UpdateQuery builds an UPDATE statement for given selectors and update fields.
+	UpdateQuery(table string, updateFields []UpdateField, selectors []Selector) (query string, params []any)
+	// Delete builds a DELETE statement for given selectors.
+	Delete(table string, selectors []Selector, opts *DeleteOptions) (query string, params []any)
+	// CreateDatabaseQuery builds a CREATE DATABASE statement.
+	CreateDatabaseQuery(dbName string, ifNotExists bool, charset string, collate string) (string, []any, error)
+	// CreateTableQuery builds a CREATE TABLE statement.
+	CreateTableQuery(tableName string, ifNotExists bool, columns []ColumnDefinition, constraints []string, options TableOptions) (string, []any, error)
+	// UseDatabaseQuery builds a USE DATABASE statement.
 	UseDatabaseQuery(dbName string) (string, []any, error)
+	// SetVariableQuery builds a SET statement for a variable.
 	SetVariableQuery(variable string, value string) (string, []any, error)
+	// AdvisoryLock builds an advisory lock statement.
 	AdvisoryLock(lockName string, timeout int) (string, []any, error)
+	// AdvisoryUnlock builds an advisory unlock statement.
 	AdvisoryUnlock(lockName string) (string, []any, error)
 }

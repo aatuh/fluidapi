@@ -42,6 +42,7 @@ func Transaction[Result any](
 	return transactionalFn(ctx, tx)
 }
 
+// finalizeTransaction commits or rollbacks a transaction.
 func finalizeTransaction(tx Tx, txErr error) error {
 	if txErr != nil {
 		if err := tx.Rollback(); err != nil {

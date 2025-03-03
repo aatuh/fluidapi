@@ -35,6 +35,7 @@ const (
 	NOT_IN           Predicate = "NOT IN"
 )
 
+// OrderDirection is used to specify the order of the result set.
 type OrderDirection string
 
 const (

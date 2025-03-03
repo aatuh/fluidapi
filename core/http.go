@@ -55,6 +55,7 @@ func HTTPServer(server IServer) error {
 	return startServer(make(chan os.Signal, 1), server)
 }
 
+// startServer starts the HTTP server and listens for shutdown signals.
 func startServer(stopChan chan os.Signal, server IServer) error {
 	// Listen for shutdown signals
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
@@ -90,6 +91,7 @@ func startServer(stopChan chan os.Signal, server IServer) error {
 	return <-errChan
 }
 
+// setupMux sets up the HTTP mux with the specified endpoints.
 func setupMux(
 	httpEndpoints []Endpoint,
 	eventEmitter *EventEmitter,
@@ -113,6 +115,7 @@ func setupMux(
 	return mux
 }
 
+// createEndpointHandler creates an HTTP handler for the specified endpoints.
 func createEndpointHandler(
 	endpoints map[string]http.Handler,
 	eventEmitter *EventEmitter,
@@ -142,6 +145,7 @@ func createEndpointHandler(
 	}
 }
 
+// createNotFoundHandler creates an HTTP handler for not found requests.
 func createNotFoundHandler(
 	eventEmitter *EventEmitter,
 ) http.HandlerFunc {
@@ -162,6 +166,7 @@ func createNotFoundHandler(
 	}
 }
 
+// mapKeys returns the keys of a map.
 func mapKeys[K comparable, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
@@ -170,6 +175,7 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
+// multiplexEndpoints multiplexes endpoints by URL and method.
 func multiplexEndpoints(
 	httpEndpoints []Endpoint,
 	eventEmitter *EventEmitter,
@@ -199,6 +205,7 @@ func multiplexEndpoints(
 	return endpoints
 }
 
+// serverPanicHandler returns an HTTP handler that recovers from panics.
 func serverPanicHandler(
 	next http.Handler,
 	eventEmitter *EventEmitter,
@@ -226,6 +233,7 @@ func serverPanicHandler(
 	})
 }
 
+// stackTraceSlice returns the stack trace as a slice of strings.
 func stackTraceSlice() []string {
 	var stackTrace []string
 	var skip int

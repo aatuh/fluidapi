@@ -8,14 +8,18 @@ import (
 	"github.com/pakkasys/fluidapi/database"
 )
 
+// Predicate is a string representation of a filtering predicate.
 type Predicate string
 
+// String returns the string representation of the predicate.
 func (p Predicate) String() string {
 	return string(p)
 }
 
+// Predicates is a slice of Predicate values.
 type Predicates []Predicate
 
+// String returns a string representation of the predicates.
 func (p Predicates) String() string {
 	str := make([]string, len(p))
 	for i, predicate := range p {
@@ -24,158 +28,105 @@ func (p Predicates) String() string {
 	return strings.Join(str, ",")
 }
 
-const (
-	GREATER                Predicate = ">"
-	GREATER_SHORT          Predicate = "gt"
-	GREATER_OR_EQUAL       Predicate = ">="
-	GREATER_OR_EQUAL_SHORT Predicate = "ge"
-	EQUAL                  Predicate = "="
-	EQUAL_SHORT            Predicate = "eq"
-	NOT_EQUAL              Predicate = "!="
-	NOT_EQUAL_SHORT        Predicate = "ne"
-	LESS                   Predicate = "<"
-	LESS_SHORT             Predicate = "LT"
-	LESS_OR_EQUAL          Predicate = "<="
-	LESS_OR_EQUAL_SHORT    Predicate = "le"
-	IN                     Predicate = "in"
-	NOT_IN                 Predicate = "not_in"
-)
-
-var ToDBPredicates = map[Predicate]database.Predicate{
-	GREATER:                database.GREATER,
-	GREATER_SHORT:          database.GREATER,
-	GREATER_OR_EQUAL:       database.GREATER_OR_EQUAL,
-	GREATER_OR_EQUAL_SHORT: database.GREATER_OR_EQUAL,
-	EQUAL:                  database.EQUAL,
-	EQUAL_SHORT:            database.EQUAL,
-	NOT_EQUAL:              database.NOT_EQUAL,
-	NOT_EQUAL_SHORT:        database.NOT_EQUAL,
-	LESS:                   database.LESS,
-	LESS_SHORT:             database.LESS,
-	LESS_OR_EQUAL:          database.LESS_OR_EQUAL,
-	LESS_OR_EQUAL_SHORT:    database.LESS_OR_EQUAL,
-	IN:                     database.IN,
-	NOT_IN:                 database.NOT_IN,
+// StrSlice returns a slice of strings representing the predicates.
+func (p Predicates) StrSlice() []string {
+	str := make([]string, len(p))
+	for i, predicate := range p {
+		str[i] = predicate.String()
+	}
+	return str
 }
 
+const (
+	GREATER          Predicate = ">"
+	GT               Predicate = "gt"
+	GREATER_OR_EQUAL Predicate = ">="
+	GE               Predicate = "ge"
+	EQUAL            Predicate = "="
+	EQ               Predicate = "eq"
+	NOT_EQUAL        Predicate = "!="
+	NE               Predicate = "ne"
+	LESS             Predicate = "<"
+	LT               Predicate = "LT"
+	LESS_OR_EQUAL    Predicate = "<="
+	LE               Predicate = "le"
+	IN               Predicate = "in"
+	NOT_IN           Predicate = "not_in"
+)
+
+// ToDBPredicates maps API-level predicates to database predicates.
+var ToDBPredicates = map[Predicate]database.Predicate{
+	GREATER:          database.GREATER,
+	GT:               database.GREATER,
+	GREATER_OR_EQUAL: database.GREATER_OR_EQUAL,
+	GE:               database.GREATER_OR_EQUAL,
+	EQUAL:            database.EQUAL,
+	EQ:               database.EQUAL,
+	NOT_EQUAL:        database.NOT_EQUAL,
+	NE:               database.NOT_EQUAL,
+	LESS:             database.LESS,
+	LT:               database.LESS,
+	LESS_OR_EQUAL:    database.LESS_OR_EQUAL,
+	LE:               database.LESS_OR_EQUAL,
+	IN:               database.IN,
+	NOT_IN:           database.NOT_IN,
+}
+
+// AllPredicates is a slice of all available predicates.
 var AllPredicates = []Predicate{
 	GREATER,
-	GREATER_SHORT,
+	GT,
 	GREATER_OR_EQUAL,
-	GREATER_OR_EQUAL_SHORT,
+	GE,
 	EQUAL,
-	EQUAL_SHORT,
+	EQ,
 	NOT_EQUAL,
-	NOT_EQUAL_SHORT,
+	NE,
 	LESS,
-	LESS_SHORT,
+	LT,
 	LESS_OR_EQUAL,
-	LESS_OR_EQUAL_SHORT,
+	LE,
 	IN,
 	NOT_IN,
 }
 
+// OnlyEqualPredicates is a slice of predicates that only allow equality.
 var OnlyEqualPredicates = []Predicate{
 	EQUAL,
-	EQUAL_SHORT,
+	EQ,
 }
 
+// EqualAndNotEqualPredicates is a slice of predicates that allow both equality
+// and inequality.
 var EqualAndNotEqualPredicates = []Predicate{
 	EQUAL,
-	EQUAL_SHORT,
+	EQ,
 	NOT_EQUAL,
-	NOT_EQUAL_SHORT,
+	NE,
 }
 
+// OnlyGreaterPredicates is a slice of predicates that only allow greater
+// values.
 var OnlyGreaterPredicates = []Predicate{
 	GREATER_OR_EQUAL,
-	GREATER_OR_EQUAL_SHORT,
+	GE,
 	GREATER,
-	GREATER_SHORT,
+	GT,
 }
 
+// OnlyLessPredicates is a slice of predicates that only allow less values.
 var OnlyLessPredicates = []Predicate{
 	LESS_OR_EQUAL,
-	LESS_OR_EQUAL_SHORT,
+	LE,
 	LESS,
-	LESS_SHORT,
+	LT,
 }
 
+// OnlyInAndNotInPredicates is a slice of predicates that only allow
+// IN and NOT_IN
 var OnlyInAndNotInPredicates = []Predicate{
 	IN,
 	NOT_IN,
-}
-
-// Definition represents an endpoint definition.
-type Definition struct {
-	URL    string
-	Method string
-	Stack  Stack
-}
-
-// Option is a function that modifies a definition when it is cloned
-type Option func(*Definition)
-
-// Clone clones an endpoint definition with options
-func (d *Definition) Clone(options ...Option) *Definition {
-	cloned := *d
-	for _, option := range options {
-		option(&cloned)
-	}
-	return &cloned
-}
-
-// WithURL returns an option that sets the URL of the endpoint
-func WithURL(url string) Option {
-	return func(e *Definition) {
-		e.URL = url
-	}
-}
-
-// WithMethod returns an option that sets the method of the endpoint
-func WithMethod(method string) Option {
-	return func(e *Definition) {
-		e.Method = method
-	}
-}
-
-// WithMiddlewareStack return an option that sets the middleware stack
-func WithMiddlewareStack(stack Stack) Option {
-	return func(e *Definition) {
-		e.Stack = stack
-	}
-}
-
-// WithMiddlewareWrappersFunc returns an option that sets the middleware stack
-func WithMiddlewareWrappersFunc(
-	middlewareWrappersFunc func(definition *Definition) Stack,
-) Option {
-	return func(e *Definition) {
-		e.Stack = middlewareWrappersFunc(e)
-	}
-}
-
-type Definitions []Definition
-
-// ToEndpoints converts a list of endpoint definitions to a list of API
-// endpoints.
-func (d Definitions) ToEndpoints() []core.Endpoint {
-	endpoints := []core.Endpoint{}
-
-	for _, definition := range d {
-		middlewares := []core.Middleware{}
-		for _, mw := range definition.Stack {
-			middlewares = append(middlewares, mw.Middleware)
-		}
-
-		endpoints = append(endpoints, core.Endpoint{
-			URL:         definition.URL,
-			Method:      definition.Method,
-			Middlewares: middlewares,
-		})
-	}
-
-	return endpoints
 }
 
 // DBField is used to translate between API field and database field.
@@ -196,6 +147,7 @@ type Page struct {
 	Limit  int `json:"limit"`
 }
 
+// ToDBPage converts a Page to database Page.
 func (p *Page) ToDBPage() *database.Page {
 	if p == nil {
 		return nil
@@ -235,6 +187,7 @@ var DirectionsToDB = map[OrderDirection]database.OrderDirection{
 	DirectionDescending: database.OrderDesc,
 }
 
+// Orders is a map of field names to order directions.
 type Orders map[string]OrderDirection
 
 // TranslateToDBOrders translates the provided orders into database orders.
@@ -343,6 +296,13 @@ type Selector struct {
 	Value     any       `json:"value"`     // The value to filter on.
 }
 
+func NewSelector(predicate Predicate, value any) *Selector {
+	return &Selector{
+		Predicate: predicate,
+		Value:     value,
+	}
+}
+
 // String returns a string representation of the selector.
 // It is useful for debugging and logging purposes.
 //
@@ -355,6 +315,16 @@ func (s Selector) String() string {
 // Selectors represents a collection of selectors used for filtering data.
 // It is a map where the key is the field name and the value is the selector.
 type Selectors map[string]Selector
+
+func (s Selectors) AddSelector(
+	field string, predicate Predicate, value any,
+) Selectors {
+	s[field] = Selector{
+		Predicate: predicate,
+		Value:     value,
+	}
+	return s
+}
 
 // ToDBSelectors converts a slice of API-level selectors to database selectors.
 //
@@ -418,6 +388,7 @@ type InvalidDatabaseUpdateTranslationErrorData struct {
 
 var InvalidDatabaseUpdateTranslationError = core.NewAPIError("INVALID_DATABASE_UPDATE_TRANSLATION")
 
+// Updates represents a list of updates to apply to a database entity.
 type Updates map[string]any
 
 // ToDBUpdates translates a list of updates to a database update list
@@ -457,54 +428,4 @@ func (updates Updates) ToDBUpdates(
 	}
 
 	return dbUpdates, nil
-}
-
-// Wrapper wraps a middleware function with additional metadata.
-type Wrapper struct {
-	Middleware core.Middleware
-	ID         string
-	Data       any
-}
-
-// Stack represents a list of middleware wrappers.
-type Stack []Wrapper
-
-// Middlewares returns the middlewares in the stack.
-//
-// Parameters:
-//   - s: The middleware stack.
-//
-// Returns:
-//   - The middlewares in the stack.
-func (s Stack) Middlewares() []core.Middleware {
-	middlewares := []core.Middleware{}
-	for _, mw := range s {
-		middlewares = append(middlewares, mw.Middleware)
-	}
-	return middlewares
-}
-
-// InsertAfterID inserts a middleware wrapper after the given ID.
-//
-// Parameters:
-//   - id: The ID of the middleware to insert after.
-//   - wrapper: The middleware wrapper to insert.
-//
-// Returns:
-//   - True if the middleware was inserted, false otherwise.
-func (s *Stack) InsertAfterID(id string, wrapper Wrapper) bool {
-	for i, mw := range *s {
-		if mw.ID == id {
-			if i == len(*s)-1 {
-				*s = append(*s, wrapper)
-			} else {
-				*s = append(
-					(*s)[:i+1],
-					append([]Wrapper{wrapper}, (*s)[i+1:]...)...,
-				)
-			}
-			return true
-		}
-	}
-	return false
 }
