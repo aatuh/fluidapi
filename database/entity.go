@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Preparer is an interface for preparing SQL statements (implemented by *sql.DB or *sql.Tx).
+// Preparer is an interface for preparing SQL statements.
 type Preparer interface {
 	Prepare(query string) (Stmt, error)
 }
@@ -67,10 +67,10 @@ type TableNamer interface {
 	TableName() string
 }
 
-// Inserter provides values for INSERT operations.
-type Inserter interface {
+// Mutator provides values for insert and update operations.
+type Mutator interface {
 	TableNamer
-	// InsertedValues returns the column names and corresponding values for an insert.
+	// InsertedValues returns the column names and values for insertion.
 	InsertedValues() ([]string, []any)
 }
 
@@ -90,18 +90,20 @@ type ErrorChecker interface {
 //
 // Parameters:
 //   - preparer: The database connection or transaction to use for preparing the statement.
-//   - inserter: The entity to insert (provides table name and values).
+//   - mutator: The entity to insert (provides table name and values).
 //   - queryBuilder: The SQL query builder for constructing the INSERT statement.
 //   - errorChecker: Translates SQL driver errors into *core.APIError instances.
 //
 // Returns: The new record's ID if applicable (e.g., auto-increment ID) and any error.
 func Insert(
 	preparer Preparer,
-	inserter Inserter,
+	entity Mutator,
 	queryBuilder QueryBuilder,
 	errorChecker ErrorChecker,
 ) (int64, error) {
-	query, args := queryBuilder.Insert(inserter.TableName(), inserter.InsertedValues)
+	query, args := queryBuilder.Insert(
+		entity.TableName(), entity.InsertedValues,
+	)
 	result, err := Exec(preparer, query, args)
 	return checkInsertResult(result, err, errorChecker)
 }
@@ -110,26 +112,26 @@ func Insert(
 //
 // Parameters:
 //   - preparer: The database connection or transaction to use.
-//   - inserters: A slice of entities to insert.
+//   - mutators: A slice of entities to insert.
 //   - queryBuilder: The SQL query builder for constructing the batch INSERT.
 //   - errorChecker: Translates driver errors (e.g., duplicates) into *core.APIError.
 //
 // Returns: The last inserted ID from the batch (if supported) and any error.
 func InsertMany(
 	preparer Preparer,
-	inserters []Inserter,
+	mutators []Mutator,
 	queryBuilder QueryBuilder,
 	errorChecker ErrorChecker,
 ) (int64, error) {
-	if len(inserters) == 0 {
+	if len(mutators) == 0 {
 		return 0, nil
 	}
-	// Collect values from all inserters
-	insertedFuncs := make([]InsertedValuesFn, len(inserters))
-	for i, ins := range inserters {
+	// Collect values from all mutators
+	insertedFuncs := make([]InsertedValuesFn, len(mutators))
+	for i, ins := range mutators {
 		insertedFuncs[i] = ins.InsertedValues
 	}
-	tableName := inserters[0].TableName()
+	tableName := mutators[0].TableName()
 	query, args := queryBuilder.InsertMany(tableName, insertedFuncs)
 	result, err := Exec(preparer, query, args)
 	return checkInsertResult(result, err, errorChecker)
@@ -140,7 +142,7 @@ func InsertMany(
 //
 // Parameters:
 //   - preparer: The database connection or transaction to use.
-//   - inserters: The entities to upsert.
+//   - mutators: The entities to upsert.
 //   - updateProjections: Columns and values to update if a conflict occurs.
 //   - queryBuilder: The SQL builder to construct the UPSERT statement.
 //   - errorChecker: Translates driver errors to *core.APIError (e.g., unique constraint violations).
@@ -148,12 +150,12 @@ func InsertMany(
 // Returns: The last inserted ID or 0 if no insert happened, and any error.
 func UpsertMany(
 	preparer Preparer,
-	inserters []Inserter,
+	mutators []Mutator,
 	updateProjections []Projection,
 	queryBuilder QueryBuilder,
 	errorChecker ErrorChecker,
 ) (int64, error) {
-	if len(inserters) == 0 {
+	if len(mutators) == 0 {
 		return 0, fmt.Errorf("must provide entities to upsert")
 	}
 	if len(updateProjections) == 0 {
@@ -163,11 +165,13 @@ func UpsertMany(
 		return 0, fmt.Errorf("update projections must include an alias for the upserted table")
 	}
 	// Prepare batch values for upsert
-	insertedFuncs := make([]InsertedValuesFn, len(inserters))
-	for i, ins := range inserters {
+	insertedFuncs := make([]InsertedValuesFn, len(mutators))
+	for i, ins := range mutators {
 		insertedFuncs[i] = ins.InsertedValues
 	}
-	query, args := queryBuilder.UpsertMany(inserters[0].TableName(), insertedFuncs, updateProjections)
+	query, args := queryBuilder.UpsertMany(
+		mutators[0].TableName(), insertedFuncs, updateProjections,
+	)
 	result, err := Exec(preparer, query, args)
 	return checkInsertResult(result, err, errorChecker)
 }
@@ -269,7 +273,9 @@ func Update(
 	if len(updateFields) == 0 {
 		return 0, nil
 	}
-	query, args := queryBuilder.UpdateQuery(updater.TableName(), updateFields, selectors)
+	query, args := queryBuilder.UpdateQuery(
+		updater.TableName(), updateFields, selectors,
+	)
 	result, err := Exec(preparer, query, args)
 	return checkUpdateResult(result, err, errorChecker)
 }
@@ -312,11 +318,7 @@ func Delete(
 //   - parameters: The query parameters.
 //
 // Returns: The Result of the execution (for retrieving last insert ID, rows affected) and an error if execution fails.
-func Exec(
-	preparer Preparer,
-	query string,
-	parameters []any,
-) (Result, error) {
+func Exec(preparer Preparer, query string, parameters []any) (Result, error) {
 	stmt, err := preparer.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -338,11 +340,7 @@ func Exec(
 //   - parameters: The query parameters.
 //
 // Returns: The Result of execution and any error.
-func ExecRaw(
-	db DB,
-	query string,
-	parameters []any,
-) (Result, error) {
+func ExecRaw(db DB, query string, parameters []any) (Result, error) {
 	result, err := db.Exec(query, parameters...)
 	if err != nil {
 		return nil, err
@@ -360,9 +358,7 @@ func ExecRaw(
 //
 // Returns: The resulting Rows and the prepared Stmt (both must be closed by the caller), or an error.
 func Query(
-	preparer Preparer,
-	query string,
-	parameters []any,
+	preparer Preparer, query string, parameters []any,
 ) (Rows, Stmt, error) {
 	stmt, err := preparer.Prepare(query)
 	if err != nil {
@@ -376,10 +372,10 @@ func Query(
 	return rows, stmt, nil
 }
 
-// --- Helper functions (unexported) ---
-
 // checkInsertResult checks the result of an insert or upsert operation and returns the new ID.
-func checkInsertResult(result Result, err error, errorChecker ErrorChecker) (int64, error) {
+func checkInsertResult(
+	result Result, err error, errorChecker ErrorChecker,
+) (int64, error) {
 	if err != nil {
 		// Use the error checker to translate errors (e.g., duplicate key) if possible.
 		return 0, errorChecker.Check(err)
@@ -396,7 +392,9 @@ func checkInsertResult(result Result, err error, errorChecker ErrorChecker) (int
 }
 
 // checkUpdateResult checks the result of an update and returns rows affected.
-func checkUpdateResult(result Result, err error, errorChecker ErrorChecker) (int64, error) {
+func checkUpdateResult(
+	result Result, err error, errorChecker ErrorChecker,
+) (int64, error) {
 	if err != nil {
 		return 0, errorChecker.Check(err)
 	}
@@ -412,10 +410,7 @@ func checkUpdateResult(result Result, err error, errorChecker ErrorChecker) (int
 
 // queryMultiple is an internal helper to query and scan multiple entities of type T.
 func queryMultiple[T Getter](
-	preparer Preparer,
-	query string,
-	params []any,
-	factoryFn func() T,
+	preparer Preparer, query string, params []any, factoryFn func() T,
 ) ([]T, error) {
 	rows, stmt, err := Query(preparer, query, params)
 	if err != nil {
@@ -428,10 +423,7 @@ func queryMultiple[T Getter](
 
 // querySingle is an internal helper to query and scan a single entity of type T.
 func querySingle[T Getter](
-	preparer Preparer,
-	query string,
-	params []any,
-	factoryFn func() T,
+	preparer Preparer, query string, params []any, factoryFn func() T,
 ) (T, error) {
 	var zero T
 	stmt, err := preparer.Prepare(query)
@@ -444,10 +436,7 @@ func querySingle[T Getter](
 }
 
 // rowToEntity scans a single Row into a new entity of type T.
-func rowToEntity[T Getter](
-	row Row,
-	factoryFn func() T,
-) (T, error) {
+func rowToEntity[T Getter](row Row, factoryFn func() T) (T, error) {
 	var zero T
 	entity := factoryFn()
 	if err := entity.ScanRow(row); err != nil {
@@ -460,10 +449,7 @@ func rowToEntity[T Getter](
 }
 
 // rowsToEntities scans all rows into a slice of entities of type T.
-func rowsToEntities[T Getter](
-	rows Rows,
-	factoryFn func() T,
-) ([]T, error) {
+func rowsToEntities[T Getter](rows Rows, factoryFn func() T) ([]T, error) {
 	results := []T{}
 	for rows.Next() {
 		entity := factoryFn()

@@ -54,6 +54,11 @@ func WithMiddlewareWrappersFunc(
 // Definitions is a list of endpoint definitions
 type Definitions []Definition
 
+// With returns an option that sets the endpoint definitions
+func (d Definitions) With(definitions ...Definition) Definitions {
+	return append(d, definitions...)
+}
+
 // ToEndpoints converts a list of endpoint definitions to a list of API
 // endpoints.
 func (d Definitions) ToEndpoints() []core.Endpoint {
