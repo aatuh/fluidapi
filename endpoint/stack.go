@@ -16,17 +16,55 @@ type Wrapper struct {
 	Data       any
 }
 
-// Stack manages an ordered list of middleware wrappers with concurrency safety.
+// NewWrapper creates a new middleware Wrapper.
+//
+// Parameters:
+//   - m: The middleware to wrap.
+//   - id: The ID of the wrapper.
+//   - data: Optional data to attach to the wrapper.
+//
+// Returns:
+//   - Wrapper: A new middleware Wrapper.
+func NewWrapper(m core.Middleware, id string, data any) Wrapper {
+	return Wrapper{
+		Middleware: m,
+		ID:         id,
+		Data:       data,
+	}
+}
+
+// Stack manages an ordered list of middleware wrappers with concurrency safety
+// for editing the list.
 type Stack struct {
 	mu       sync.RWMutex
 	wrappers []Wrapper
 }
 
 // NewStack creates and returns an initialized middleware Stack.
+//
+// Parameters:
+//   - wrappers: The initial list of middleware wrappers.
+//
+// Returns:
+//   - *Stack: A new middleware Stack.
 func NewStack(wrappers ...Wrapper) *Stack {
 	return &Stack{
 		wrappers: wrappers,
 	}
+}
+
+// Build returns the middlewares in the stack.
+//
+// Returns:
+//   - []core.Middleware: The list of middlewares in the stack.
+func (s *Stack) Build() []core.Middleware {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	middlewares := make([]core.Middleware, len(s.wrappers))
+	for i, wrapper := range s.wrappers {
+		middlewares[i] = wrapper.Middleware
+	}
+	return middlewares
 }
 
 // Clone creates a deep copy of the Stack.
@@ -74,8 +112,9 @@ func (s *Stack) InsertBefore(id string, w Wrapper) (*Stack, bool) {
 	defer s.mu.Unlock()
 	for i, wrapper := range s.wrappers {
 		if wrapper.ID == id {
-			s.wrappers = append(s.wrappers[:i],
-				append([]Wrapper{w}, s.wrappers[i:]...)...)
+			s.wrappers = append(
+				s.wrappers[:i], append([]Wrapper{w}, s.wrappers[i:]...)...,
+			)
 			return s, true
 		}
 	}
@@ -100,8 +139,10 @@ func (s *Stack) InsertAfter(id string, w Wrapper) (*Stack, bool) {
 	for i, wrapper := range s.wrappers {
 		if wrapper.ID == id {
 			pos := i + 1
-			s.wrappers = append(s.wrappers[:pos],
-				append([]Wrapper{w}, s.wrappers[pos:]...)...)
+			s.wrappers = append(
+				s.wrappers[:pos],
+				append([]Wrapper{w}, s.wrappers[pos:]...)...,
+			)
 			return s, true
 		}
 	}

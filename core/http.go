@@ -88,7 +88,7 @@ func StartServer(
 // logging will be used. If no logger is provided, log.Default() will be used.
 type ServerHandler struct {
 	eventEmitter *EventEmitter
-	logger       *log.Logger
+	logger       Logger
 }
 
 // NewHTTPServerHandler creates a new HTTPServer.
@@ -100,7 +100,7 @@ type ServerHandler struct {
 // Returns:
 //   - *ServerHandler: HTTP server handler.
 func NewHTTPServerHandler(
-	eventEmitter *EventEmitter, logger *log.Logger,
+	eventEmitter *EventEmitter, logger Logger,
 ) *ServerHandler {
 	if logger == nil {
 		logger = log.Default()
@@ -251,27 +251,27 @@ func (s *ServerHandler) createNotFoundHandler() http.HandlerFunc {
 
 // multiplexEndpoints multiplexes endpoints by URL and method.
 func (s *ServerHandler) multiplexEndpoints(
-	httpEndpoints []Endpoint,
+	endpoints []Endpoint,
 ) map[string]map[string]http.Handler {
-	endpoints := make(map[string]map[string]http.Handler)
-	for _, ep := range httpEndpoints {
-		if endpoints[ep.URL] == nil {
-			endpoints[ep.URL] = make(map[string]http.Handler)
+	multiplexed := make(map[string]map[string]http.Handler)
+	for _, endpoint := range endpoints {
+		if multiplexed[endpoint.URL] == nil {
+			multiplexed[endpoint.URL] = make(map[string]http.Handler)
 		}
 		var baseHandler http.Handler
-		if ep.Handler != nil {
-			baseHandler = http.HandlerFunc(ep.Handler)
+		if endpoint.Handler != nil {
+			baseHandler = http.HandlerFunc(endpoint.Handler)
 		} else {
 			// Fallback to a default no-op handler.
 			baseHandler = http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {},
 			)
 		}
-		endpoints[ep.URL][ep.Method] = s.serverPanicHandler(
-			ApplyMiddlewares(baseHandler, ep.Middlewares...),
+		multiplexed[endpoint.URL][endpoint.Method] = s.serverPanicHandler(
+			ApplyMiddlewares(baseHandler, endpoint.Middlewares...),
 		)
 	}
-	return endpoints
+	return multiplexed
 }
 
 // serverPanicHandler returns an HTTP handler that recovers from panics.

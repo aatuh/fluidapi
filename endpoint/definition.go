@@ -1,12 +1,17 @@
 package endpoint
 
-import "github.com/pakkasys/fluidapi/core"
+import (
+	"net/http"
+
+	"github.com/pakkasys/fluidapi/core"
+)
 
 // Definition represents an endpoint definition.
 type Definition struct {
-	URL    string
-	Method string
-	Stack  *Stack
+	URL     string
+	Method  string
+	Stack   *Stack
+	Handler http.HandlerFunc // Optional handler for the endpoint.
 }
 
 // Option is a function that modifies a definition when it is cloned.
@@ -119,11 +124,15 @@ func (d Definitions) ToEndpoints() []core.Endpoint {
 				middlewares = append(middlewares, mw.Middleware)
 			}
 		}
-		endpoints = append(endpoints, core.Endpoint{
-			URL:         definition.URL,
-			Method:      definition.Method,
-			Middlewares: middlewares,
-		})
+		endpoints = append(
+			endpoints,
+			core.NewEndpoint(
+				definition.URL,
+				definition.Method,
+				middlewares,
+				definition.Handler,
+			),
+		)
 	}
 	return endpoints
 }
