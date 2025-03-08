@@ -1,26 +1,5 @@
 package database
 
-// JoinType represents the type of join
-type JoinType string
-
-const (
-	JoinTypeInner JoinType = "INNER"
-	JoinTypeLeft  JoinType = "LEFT"
-	JoinTypeRight JoinType = "RIGHT"
-	JoinTypeFull  JoinType = "FULL"
-)
-
-// Join represents a database join clause
-type Join struct {
-	Type    JoinType
-	Table   string
-	OnLeft  ColumnSelector
-	OnRight ColumnSelector
-}
-
-// Joins is a list of joins
-type Joins []Join
-
 // Predicate represents the predicate of a database selector.
 type Predicate string
 
@@ -38,6 +17,7 @@ const (
 // OrderDirection is used to specify the order of the result set.
 type OrderDirection string
 
+// Order directions.
 const (
 	OrderAsc  OrderDirection = "ASC"
 	OrderDesc OrderDirection = "DESC"
@@ -82,7 +62,11 @@ type Selectors []Selector
 
 // GetByField returns selector with the given field.
 //
+// Parameters:
 //   - field: the field to search for
+//
+// Returns:
+//   - *Selector: The selector
 func (s Selectors) GetByField(field string) *Selector {
 	for j := range s {
 		if s[j].Field == field {
@@ -92,9 +76,13 @@ func (s Selectors) GetByField(field string) *Selector {
 	return nil
 }
 
-// GetByFields returns selector with the given fields.
+// GetByFields returns selectors with the given fields.
 //
+// Parameters:
 //   - fields: the fields to search for
+//
+// Returns:
+//   - []Selector: A list of selectors
 func (s Selectors) GetByFields(fields ...string) []Selector {
 	selectors := []Selector{}
 	for f := range fields {
@@ -121,3 +109,25 @@ type Page struct {
 	Offset int
 	Limit  int
 }
+
+// JoinType represents the type of join
+type JoinType string
+
+// Join types.
+const (
+	JoinTypeInner JoinType = "INNER"
+	JoinTypeLeft  JoinType = "LEFT"
+	JoinTypeRight JoinType = "RIGHT"
+	JoinTypeFull  JoinType = "FULL"
+)
+
+// Join represents a database join clause.
+type Join struct {
+	Type    JoinType
+	Table   string
+	OnLeft  ColumnSelector
+	OnRight ColumnSelector
+}
+
+// Joins is a list of joins
+type Joins []Join

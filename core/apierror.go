@@ -3,7 +3,7 @@ package core
 import "fmt"
 
 // APIError represents a JSON marshalable custom error type with an ID and
-// optional data.
+// other data.
 type APIError struct {
 	ID      string  `json:"id"`
 	Data    any     `json:"data,omitempty"`
@@ -11,6 +11,12 @@ type APIError struct {
 }
 
 // NewAPIError returns a new error with the given ID.
+//
+// Parameters:
+//   - id: The ID of the error.
+//
+// Returns:
+//   - *APIError: A new APIError.
 func NewAPIError(id string) *APIError {
 	return &APIError{
 		ID: id,
@@ -18,6 +24,12 @@ func NewAPIError(id string) *APIError {
 }
 
 // WithData returns a new error with the given data.
+//
+// Parameters:
+//   - data: The data to include in the error.
+//
+// Returns:
+//   - *APIError: A new APIError.
 func (e *APIError) WithData(data any) *APIError {
 	return &APIError{
 		ID:   e.ID,
@@ -26,6 +38,12 @@ func (e *APIError) WithData(data any) *APIError {
 }
 
 // WithMessage returns a new error with the given message.
+//
+// Parameters:
+//   - message: The message to include in the error.
+//
+// Returns:
+//   - *APIError: A new APIError.
 func (e *APIError) WithMessage(message string) *APIError {
 	return &APIError{
 		ID:      e.ID,
@@ -34,7 +52,11 @@ func (e *APIError) WithMessage(message string) *APIError {
 	}
 }
 
-// Error returns the full error message as a string.
+// Error returns the full error message as a string. If the error has a message,
+// it returns the ID followed by the message. Otherwise, it returns just the ID.
+//
+// Returns:
+//   - string: The full error message as a string.
 func (e *APIError) Error() string {
 	if e.Message != nil {
 		return fmt.Sprintf("%s: %s", e.ID, *e.Message)

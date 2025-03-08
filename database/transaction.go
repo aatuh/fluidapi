@@ -5,11 +5,10 @@ import (
 	"fmt"
 )
 
-// TransactionalFunc is a function that takes a transaction and returns a
-// result.
+// TransactionalFunc is a function that takes in a transaction, and returns a
+// result and an error.
 type TransactionalFunc[Result any] func(
-	ctx context.Context,
-	tx Tx,
+	ctx context.Context, tx Tx,
 ) (Result, error)
 
 // Transaction executes a TransactionalFunc in a transaction.
