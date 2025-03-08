@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -29,7 +30,7 @@ func NewEvent(eventType EventType, message string) *Event {
 	}
 }
 
-// WithData returns a new event with the given data.
+// WithData returns a new event with the given data. It returns a new event.
 //
 // Parameters:
 //   - data: The data to include in the event.
@@ -44,10 +45,17 @@ func (e *Event) WithData(data any) *Event {
 	}
 }
 
+// eventListener wraps a listener callback with an ID.
+type eventListener struct {
+	id       string
+	callback func(*Event)
+}
+
 // EventEmitter is responsible for emitting events.
 type EventEmitter struct {
-	listeners map[EventType][]func(*Event)
-	mu        sync.RWMutex
+	listeners map[EventType][]eventListener
+	mu        sync.RWMutex // Mutex for thread safety when emitting events.
+	counter   int          // Used to generate unique IDs for listeners.
 }
 
 // NewEventEmitter creates a new EventEmitter.
@@ -56,7 +64,7 @@ type EventEmitter struct {
 //   - *EventEmitter: A new EventEmitter.
 func NewEventEmitter() *EventEmitter {
 	return &EventEmitter{
-		listeners: make(map[EventType][]func(*Event)),
+		listeners: make(map[EventType][]eventListener),
 	}
 }
 
@@ -71,14 +79,40 @@ func NewEventEmitter() *EventEmitter {
 func (e *EventEmitter) RegisterListener(
 	eventType EventType, listener func(*Event),
 ) *EventEmitter {
+	// Generate a unique ID for the listener.
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	_, ok := e.listeners[eventType]
-	if !ok {
-		e.listeners[eventType] = []func(*Event){}
-	}
-	e.listeners[eventType] = append(e.listeners[eventType], listener)
+	e.counter++
+	id := fmt.Sprintf("%s-%d", eventType, e.counter)
+
+	// Add the listener to the list.
+	e.listeners[eventType] = append(e.listeners[eventType], eventListener{
+		id:       id,
+		callback: listener,
+	})
 	return e
+}
+
+// RemoveListener removes a listener for a specific event type.
+//
+// Parameters:
+//   - eventType: The type of the event.
+//   - listener: The listener function.
+//
+// Returns:
+//   - *EventEmitter: The EventEmitter.
+func (e *EventEmitter) RemoveListener(eventType EventType, id string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if list, found := e.listeners[eventType]; found {
+		for i, l := range list {
+			if l.id == id {
+				// Remove the listener with the matching ID.
+				e.listeners[eventType] = append(list[:i], list[i+1:]...)
+				break
+			}
+		}
+	}
 }
 
 // Emit emits an event to all registered listeners.
@@ -92,8 +126,8 @@ func (e *EventEmitter) Emit(event *Event) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	if listeners, found := e.listeners[event.Type]; found {
-		for _, listener := range listeners {
-			listener(event)
+		for _, l := range listeners {
+			l.callback(event)
 		}
 	}
 }

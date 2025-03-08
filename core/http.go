@@ -24,65 +24,96 @@ const (
 	EventShutDown         = "shutdown"
 )
 
-// IServer represents an HTTP server.
-type IServer interface {
+// HTTPServer represents an HTTP server.
+type HTTPServer interface {
 	ListenAndServe() error              // Start the server.
 	Shutdown(ctx context.Context) error // Shut down the server.
 }
 
-type multiplexedEndpoints map[string]map[string]http.Handler
+// Logger interface allows custom logging.
+type Logger interface {
+	Printf(format string, v ...any)
+}
 
 // DefaultHTTPServer returns the default HTTP server implementation.
 //
 // Parameters:
+//   - serverHandler: HTTP server handler.
 //   - port: Port for the HTTP server.
 //   - httpEndpoints: Endpoints to register.
-//   - eventEmitter: Optional event emitter.
 //
 // Returns:
 //   - IServer: Server implementation.
 func DefaultHTTPServer(
-	port int, httpEndpoints []Endpoint, eventEmitter *EventEmitter,
-) IServer {
+	serverHandler *ServerHandler,
+	port int,
+	httpEndpoints []Endpoint,
+) HTTPServer {
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: NewHTTPServerHandler(eventEmitter).setupMux(httpEndpoints),
+		Handler: serverHandler.setupMux(httpEndpoints),
 	}
 }
 
 // StartServer sets up an HTTP server with the specified port and endpoints,
 // using optional event emitter. The handler listens for OS interrupt signals to
-// gracefully shut down.
+// gracefully shut down. If no shutdown timeout is provided, 60 seconds will be
+// used by default.
 //
 // Parameters:
 //   - serverHandler: HTTP server handler.
 //   - server: Server implementation to use.
+//   - shutdownTimeout: Optional shutdown timeout.
 //
 // Returns:
 //   - error: Error starting the server.
-func StartServer(serverHandler *ServerHandler, server IServer) error {
-	return serverHandler.startServer(make(chan os.Signal, 1), server)
+func StartServer(
+	serverHandler *ServerHandler,
+	server HTTPServer,
+	shutdownTimeout *time.Duration,
+) error {
+	var useShutdownTimeout time.Duration
+	if shutdownTimeout == nil {
+		useShutdownTimeout = 60 * time.Second
+	} else {
+		useShutdownTimeout = *shutdownTimeout
+	}
+	return serverHandler.startServer(
+		make(chan os.Signal, 1), server, useShutdownTimeout,
+	)
 }
 
 // ServerHandler represents an HTTP server handler.
+// If an event emitter is provided, it will be used to emit events. Otherwise,
+// logging will be used. If no logger is provided, log.Default() will be used.
 type ServerHandler struct {
 	eventEmitter *EventEmitter
+	logger       *log.Logger
 }
 
 // NewHTTPServerHandler creates a new HTTPServer.
 //
 // Parameters:
 //   - eventEmitter: Optional event emitter.
+//   - logger: Optional logger.
 //
 // Returns:
 //   - *ServerHandler: HTTP server handler.
-func NewHTTPServerHandler(eventEmitter *EventEmitter) *ServerHandler {
-	return &ServerHandler{eventEmitter: eventEmitter}
+func NewHTTPServerHandler(
+	eventEmitter *EventEmitter, logger *log.Logger,
+) *ServerHandler {
+	if logger == nil {
+		logger = log.Default()
+	}
+	return &ServerHandler{
+		eventEmitter: eventEmitter,
+		logger:       logger,
+	}
 }
 
 // startServer starts the HTTP server and listens for shutdown signals.
 func (s *ServerHandler) startServer(
-	stopChan chan os.Signal, server IServer,
+	stopChan chan os.Signal, server HTTPServer, shutdownTimeout time.Duration,
 ) error {
 	// Listen for shutdown signals
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
@@ -96,7 +127,7 @@ func (s *ServerHandler) startServer(
 				EventStart, "Starting HTTP server",
 			))
 		} else {
-			log.Printf("Starting HTTP server")
+			s.logger.Printf("Starting HTTP server")
 		}
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
@@ -123,11 +154,11 @@ func (s *ServerHandler) startServer(
 			EventShutDownStarted, "Shutting down HTTP server",
 		))
 	} else {
-		log.Printf("Shutting down HTTP server")
+		s.logger.Printf("Shutting down HTTP server")
 	}
 
 	// Give the server some time to shut down
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
@@ -139,7 +170,7 @@ func (s *ServerHandler) startServer(
 			EventShutDown, "HTTP server shutdown",
 		))
 	} else {
-		log.Printf("HTTP server shutdown")
+		s.logger.Printf("HTTP server shutdown")
 	}
 	return <-errChan
 }
@@ -157,7 +188,7 @@ func (s *ServerHandler) setupMux(
 				WithData(mapKeys(endpoints[url])),
 			)
 		} else {
-			log.Printf("Registering URL: %s", url)
+			s.logger.Printf("Registering URL: %s", url)
 		}
 		iterUrl := url
 		mux.Handle(iterUrl, s.createEndpointHandler(endpoints[iterUrl]))
@@ -187,7 +218,7 @@ func (s *ServerHandler) createEndpointHandler(
 				).WithData([]string{r.URL.Path, r.Method}),
 			)
 		} else {
-			log.Printf("Method not allowed: %s (%v)", r.URL.Path, r.Method)
+			s.logger.Printf("Method not allowed: %s (%v)", r.URL.Path, r.Method)
 		}
 		http.Error(
 			w,
@@ -208,7 +239,7 @@ func (s *ServerHandler) createNotFoundHandler() http.HandlerFunc {
 				).WithData([]string{r.URL.Path, r.Method}),
 			)
 		} else {
-			log.Printf("Not found: %s (%v)", r.URL.Path, r.Method)
+			s.logger.Printf("Not found: %s (%v)", r.URL.Path, r.Method)
 		}
 		http.Error(
 			w,
@@ -221,26 +252,23 @@ func (s *ServerHandler) createNotFoundHandler() http.HandlerFunc {
 // multiplexEndpoints multiplexes endpoints by URL and method.
 func (s *ServerHandler) multiplexEndpoints(
 	httpEndpoints []Endpoint,
-) multiplexedEndpoints {
-	endpoints := multiplexedEndpoints{}
-	for i := range httpEndpoints {
-		url := httpEndpoints[i].URL
-		method := httpEndpoints[i].Method
-		if endpoints[url] == nil {
-			endpoints[url] = make(map[string]http.Handler)
+) map[string]map[string]http.Handler {
+	endpoints := make(map[string]map[string]http.Handler)
+	for _, ep := range httpEndpoints {
+		if endpoints[ep.URL] == nil {
+			endpoints[ep.URL] = make(map[string]http.Handler)
 		}
-		// Include panic handler with other middlewares
-		endpoints[url][method] = s.serverPanicHandler(
-			ApplyMiddlewares(
-				http.HandlerFunc(
-					func(
-						w http.ResponseWriter,
-						r *http.Request,
-					) {
-					},
-				),
-				httpEndpoints[i].Middlewares...,
-			),
+		var baseHandler http.Handler
+		if ep.Handler != nil {
+			baseHandler = http.HandlerFunc(ep.Handler)
+		} else {
+			// Fallback to a default no-op handler.
+			baseHandler = http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {},
+			)
+		}
+		endpoints[ep.URL][ep.Method] = s.serverPanicHandler(
+			ApplyMiddlewares(baseHandler, ep.Middlewares...),
 		)
 	}
 	return endpoints
@@ -259,7 +287,7 @@ func (s *ServerHandler) serverPanicHandler(next http.Handler) http.Handler {
 						).WithData(stackTraceSlice()),
 					)
 				} else {
-					log.Printf("Server panic: %v", err)
+					s.logger.Printf("Server panic: %v", err)
 				}
 				http.Error(
 					w,

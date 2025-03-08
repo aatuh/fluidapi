@@ -1,13 +1,17 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // APIError represents a JSON marshalable custom error type with an ID and
 // other data.
 type APIError struct {
-	ID      string  `json:"id"`
-	Data    any     `json:"data,omitempty"`
-	Message *string `json:"message,omitempty"`
+	ID        string    `json:"id"`
+	Data      any       `json:"data,omitempty"`
+	Message   *string   `json:"message,omitempty"`
+	Timestamp time.Time `json:"timestamp"` // UTC timestamp.
 }
 
 // NewAPIError returns a new error with the given ID.
@@ -19,7 +23,8 @@ type APIError struct {
 //   - *APIError: A new APIError.
 func NewAPIError(id string) *APIError {
 	return &APIError{
-		ID: id,
+		ID:        id,
+		Timestamp: time.Now().UTC(),
 	}
 }
 
@@ -32,8 +37,10 @@ func NewAPIError(id string) *APIError {
 //   - *APIError: A new APIError.
 func (e *APIError) WithData(data any) *APIError {
 	return &APIError{
-		ID:   e.ID,
-		Data: data,
+		ID:        e.ID,
+		Data:      data,
+		Message:   e.Message,
+		Timestamp: e.Timestamp,
 	}
 }
 
@@ -46,9 +53,10 @@ func (e *APIError) WithData(data any) *APIError {
 //   - *APIError: A new APIError.
 func (e *APIError) WithMessage(message string) *APIError {
 	return &APIError{
-		ID:      e.ID,
-		Data:    e.Data,
-		Message: &message,
+		ID:        e.ID,
+		Data:      e.Data,
+		Message:   &message,
+		Timestamp: e.Timestamp,
 	}
 }
 

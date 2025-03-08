@@ -5,13 +5,22 @@ import "net/http"
 // Middleware represents a function that wraps an http.Handler with additional
 // behavior. A Middleware typically performs actions before and/or after calling
 // the next handler.
+//
+// Example:
+//
+//	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//	    // final processing
+//	})
+//	wrappedHandler := ApplyMiddlewares(finalHandler, middleware1, middleware2)
 type Middleware func(http.Handler) http.Handler
 
 // ApplyMiddlewares applies a sequence of middlewares to an http.Handler.
-// The middlewares are applied in the order they are provided so that the
-// first middleware is outermost and the last middleware is innermost.
+// The middlewares are applied in reverse order so that the first middleware in
+// the list becomes the outermost wrapper.
 //
-// Example: ApplyMiddlewares(finalHandler, m1, m2) yields m1(m2(finalHandler)).
+// Example:
+//
+//	ApplyMiddlewares(finalHandler, m1, m2) yields m1(m2(finalHandler)).
 //
 // Parameters:
 //   - h: The http.Handler to wrap.
@@ -21,7 +30,6 @@ type Middleware func(http.Handler) http.Handler
 //   - http.Handler: The wrapped http.Handler.
 func ApplyMiddlewares(h http.Handler, middlewares ...Middleware) http.Handler {
 	wrapped := h
-	// Apply in reverse order so that the first in the list is outermost.
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		wrapped = middlewares[i](wrapped)
 	}
