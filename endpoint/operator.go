@@ -37,96 +37,97 @@ func (p Predicates) StrSlice() []string {
 	return str
 }
 
+// Predicates for filtering data.
 const (
-	GREATER          Predicate = ">"
-	GT               Predicate = "gt"
-	GREATER_OR_EQUAL Predicate = ">="
-	GE               Predicate = "ge"
-	EQUAL            Predicate = "="
-	EQ               Predicate = "eq"
-	NOT_EQUAL        Predicate = "!="
-	NE               Predicate = "ne"
-	LESS             Predicate = "<"
-	LT               Predicate = "LT"
-	LESS_OR_EQUAL    Predicate = "<="
-	LE               Predicate = "le"
-	IN               Predicate = "in"
-	NOT_IN           Predicate = "not_in"
+	Greater        Predicate = ">"
+	Gt             Predicate = "gt"
+	GreaterOrEqual Predicate = ">="
+	Ge             Predicate = "ge"
+	Equal          Predicate = "="
+	Eq             Predicate = "eq"
+	NotEqual       Predicate = "!="
+	Ne             Predicate = "ne"
+	Less           Predicate = "<"
+	Lt             Predicate = "LT"
+	LessOrEqual    Predicate = "<="
+	Le             Predicate = "le"
+	In             Predicate = "in"
+	NotIn          Predicate = "not_in"
 )
 
 // ToDBPredicates maps API-level predicates to database predicates.
 var ToDBPredicates = map[Predicate]database.Predicate{
-	GREATER:          database.GREATER,
-	GT:               database.GREATER,
-	GREATER_OR_EQUAL: database.GREATER_OR_EQUAL,
-	GE:               database.GREATER_OR_EQUAL,
-	EQUAL:            database.EQUAL,
-	EQ:               database.EQUAL,
-	NOT_EQUAL:        database.NOT_EQUAL,
-	NE:               database.NOT_EQUAL,
-	LESS:             database.LESS,
-	LT:               database.LESS,
-	LESS_OR_EQUAL:    database.LESS_OR_EQUAL,
-	LE:               database.LESS_OR_EQUAL,
-	IN:               database.IN,
-	NOT_IN:           database.NOT_IN,
+	Greater:        database.Greater,
+	Gt:             database.Greater,
+	GreaterOrEqual: database.GreaterOrEqual,
+	Ge:             database.GreaterOrEqual,
+	Equal:          database.Equal,
+	Eq:             database.Equal,
+	NotEqual:       database.NotEqual,
+	Ne:             database.NotEqual,
+	Less:           database.Less,
+	Lt:             database.Less,
+	LessOrEqual:    database.LessOrEqual,
+	Le:             database.LessOrEqual,
+	In:             database.In,
+	NotIn:          database.NotIn,
 }
 
 // AllPredicates is a slice of all available predicates.
 var AllPredicates = []Predicate{
-	GREATER,
-	GT,
-	GREATER_OR_EQUAL,
-	GE,
-	EQUAL,
-	EQ,
-	NOT_EQUAL,
-	NE,
-	LESS,
-	LT,
-	LESS_OR_EQUAL,
-	LE,
-	IN,
-	NOT_IN,
+	Greater,
+	Gt,
+	GreaterOrEqual,
+	Ge,
+	Equal,
+	Eq,
+	NotEqual,
+	Ne,
+	Less,
+	Lt,
+	LessOrEqual,
+	Le,
+	In,
+	NotIn,
 }
 
 // OnlyEqualPredicates is a slice of predicates that only allow equality.
 var OnlyEqualPredicates = []Predicate{
-	EQUAL,
-	EQ,
+	Equal,
+	Eq,
 }
 
 // EqualAndNotEqualPredicates is a slice of predicates that allow both equality
 // and inequality.
 var EqualAndNotEqualPredicates = []Predicate{
-	EQUAL,
-	EQ,
-	NOT_EQUAL,
-	NE,
+	Equal,
+	Eq,
+	NotEqual,
+	Ne,
 }
 
 // OnlyGreaterPredicates is a slice of predicates that only allow greater
 // values.
 var OnlyGreaterPredicates = []Predicate{
-	GREATER_OR_EQUAL,
-	GE,
-	GREATER,
-	GT,
+	GreaterOrEqual,
+	Ge,
+	Greater,
+	Gt,
 }
 
 // OnlyLessPredicates is a slice of predicates that only allow less values.
 var OnlyLessPredicates = []Predicate{
-	LESS_OR_EQUAL,
-	LE,
-	LESS,
-	LT,
+	LessOrEqual,
+	Le,
+	Less,
+	Lt,
 }
 
 // OnlyInAndNotInPredicates is a slice of predicates that only allow
 // IN and NOT_IN
 var OnlyInAndNotInPredicates = []Predicate{
-	IN,
-	NOT_IN,
+	In,
+	NotIn,
 }
 
 // DBField is used to translate between API field and database field.
@@ -135,10 +136,13 @@ type DBField struct {
 	Column string
 }
 
+// MaxPageLimitExceededErrorData is the data for the MaxPageLimitExceededError
+// error.
 type MaxPageLimitExceededErrorData struct {
 	MaxLimit int `json:"max_limit"`
 }
 
+// MaxPageLimitExceededError is returned when a page limit is exceeded.
 var MaxPageLimitExceededError = core.NewAPIError("MAX_PAGE_LIMIT_EXCEEDED")
 
 // Page represents a pagination input.
@@ -158,10 +162,12 @@ func (p *Page) ToDBPage() *database.Page {
 	}
 }
 
+// InvalidOrderFieldErrorData is the data for the InvalidOrderFieldError error.
 type InvalidOrderFieldErrorData struct {
 	Field string `json:"field"`
 }
 
+// InvalidOrderFieldError is returned when a field is not allowed.
 var InvalidOrderFieldError = core.NewAPIError("INVALID_ORDER_FIELD")
 
 // OrderDirection is used to specify the direction of the order.
@@ -172,6 +178,7 @@ func (o OrderDirection) String() string {
 	return string(o)
 }
 
+// Available order directions.
 const (
 	DirectionAsc        OrderDirection = "asc"
 	DirectionAscending  OrderDirection = "ascending"
@@ -265,28 +272,40 @@ func (o Orders) ToDBOrders(
 	return dbOrders, nil
 }
 
+// InvalidDatabaseSelectorTranslationErrorData is the data for the
+// InvalidDatabaseSelectorTranslationError error.
 type InvalidDatabaseSelectorTranslationErrorData struct {
 	Field string `json:"field"`
 }
 
+// InvalidDatabaseSelectorTranslationError is returned when a field is not
+// allowed.
 var InvalidDatabaseSelectorTranslationError = core.NewAPIError("INVALID_DATABASE_SELECTOR_TRANSLATION")
 
+// InvalidPredicateErrorData is the data for the InvalidPredicateError error.
 type InvalidPredicateErrorData struct {
 	Predicate Predicate `json:""`
 }
 
+// InvalidPredicateError is returned when a predicate is not allowed.
 var InvalidPredicateError = core.NewAPIError("INVALID_PREDICATE")
 
+// InvalidSelectorFieldErrorData is the data for the InvalidSelectorFieldError
+// error.
 type InvalidSelectorFieldErrorData struct {
 	Field string `json:"field"`
 }
 
+// InvalidSelectorFieldError is returned when a field is not allowed.
 var InvalidSelectorFieldError = core.NewAPIError("INVALID_SELECTOR_FIELD")
 
+// PredicateNotAllowedErrorData is the data for the PredicateNotAllowedError
+// error.
 type PredicateNotAllowedErrorData struct {
 	Predicate Predicate `json:"predicate"`
 }
 
+// PredicateNotAllowedError is returned when a predicate is not allowed.
 var PredicateNotAllowedError = core.NewAPIError("PREDICATE_NOT_ALLOWED")
 
 // Selector represents a data selector that specifies criteria for filtering
@@ -296,6 +315,14 @@ type Selector struct {
 	Value     any       `json:"value"`     // The value to filter on.
 }
 
+// NewSelector creates a new selector with the provided predicate and value.
+//
+// Parameters:
+//   - predicate: The predicate to use.
+//   - value: The value to filter on.
+//
+// Returns:
+//   - A new selector.
 func NewSelector(predicate Predicate, value any) *Selector {
 	return &Selector{
 		Predicate: predicate,
@@ -316,6 +343,15 @@ func (s Selector) String() string {
 // It is a map where the key is the field name and the value is the selector.
 type Selectors map[string]Selector
 
+// AddSelector adds a new selector to the collection of selectors.
+//
+// Parameters:
+//   - field: The field name.
+//   - predicate: The predicate to use.
+//   - value: The value to filter on.
+//
+// Returns:
+//   - A new collection of selectors with the new selector added.
 func (s Selectors) AddSelector(
 	field string, predicate Predicate, value any,
 ) Selectors {
@@ -373,7 +409,7 @@ func (s Selectors) ToDBSelectors(
 
 		databaseSelectors = append(databaseSelectors, database.Selector{
 			Table:     dbField.Table,
-			Field:     dbField.Column,
+			Column:    dbField.Column,
 			Predicate: dbPredicate,
 			Value:     selector.Value,
 		})
@@ -382,10 +418,14 @@ func (s Selectors) ToDBSelectors(
 	return databaseSelectors, nil
 }
 
+// InvalidDatabaseUpdateTranslationErrorData is the data for the
+// InvalidDatabaseUpdateTranslationError error.
 type InvalidDatabaseUpdateTranslationErrorData struct {
 	Field string `json:"field"`
 }
 
+// InvalidDatabaseUpdateTranslationError is used to indicate that the
+// translation of a database update failed.
 var InvalidDatabaseUpdateTranslationError = core.NewAPIError("INVALID_DATABASE_UPDATE_TRANSLATION")
 
 // Updates represents a list of updates to apply to a database entity.

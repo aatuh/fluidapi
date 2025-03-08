@@ -23,8 +23,8 @@ type DeleteOptions struct {
 	Orders Orders
 }
 
-// ColumnDefinition defines the properties for a table column in a
-// table creation query.
+// ColumnDefinition defines the properties for a table column in a table.
+// creation query.
 type ColumnDefinition struct {
 	Name          string  // Column name
 	Type          string  // Data type (with length/precision, e.g. "CHAR(36)")
@@ -32,23 +32,24 @@ type ColumnDefinition struct {
 	Default       *string // Optional default value (pass nil if not needed)
 	AutoIncrement bool    // Whether to add AUTO_INCREMENT
 	Extra         string  // Extra column options (e.g. "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin")
-	PrimaryKey    bool    // If true, marks this column as primary key (inline)
-	Unique        bool    // If true, marks this column as UNIQUE (unless already primary key)
+	PrimaryKey    bool    // Marks this column as primary key (inline)
+	Unique        bool    // Marks this column as UNIQUE (unless already primary key)
 }
 
-// TableOptions holds additional options for a  table creation query.
+// TableOptions holds additional options for a table creation query.
 type TableOptions struct {
 	Engine  string // e.g. "InnoDB"
 	Charset string // e.g. "utf8mb4"
 	Collate string // e.g. "utf8mb4_bin"
 }
 
-// InsertedValuesFn defines a function that returns column names and values for an insert.
-// This allows deferred evaluation of values and consistent ordering of parameters.
+// InsertedValuesFn defines a function that returns column names and values for
+// an insert. This allows deferred evaluation of values and consistent ordering
+// of parameters.
 type InsertedValuesFn func() ([]string, []any)
 
 // QueryBuilder defines an interface for building SQL queries dynamically.
-// Implementations handle specifics for different SQL dialects (e.g., placeholders).
+// Implementations handle specifics for different SQL dialects.
 type QueryBuilder interface {
 	// Insert builds an INSERT statement for a single row.
 	// The insertedValuesFunc should produce the column names and values for the row.

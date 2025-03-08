@@ -4,14 +4,14 @@ package database
 type Predicate string
 
 const (
-	GREATER          Predicate = ">"
-	GREATER_OR_EQUAL Predicate = ">="
-	EQUAL            Predicate = "="
-	NOT_EQUAL        Predicate = "!="
-	LESS             Predicate = "<"
-	LESS_OR_EQUAL    Predicate = "<="
-	IN               Predicate = "IN"
-	NOT_IN           Predicate = "NOT IN"
+	Greater        Predicate = ">"
+	GreaterOrEqual Predicate = ">="
+	Equal          Predicate = "="
+	NotEqual       Predicate = "!="
+	Less           Predicate = "<"
+	LessOrEqual    Predicate = "<="
+	In             Predicate = "IN"
+	NotIn          Predicate = "NOT IN"
 )
 
 // OrderDirection is used to specify the order of the result set.
@@ -33,10 +33,10 @@ type Order struct {
 // Orders is a list of orders
 type Orders []Order
 
-// ColumnSelector represents a columnn selector
+// ColumnSelector represents a column selector
 type ColumnSelector struct {
-	Table   string
-	Columnn string
+	Table  string
+	Column string
 }
 
 // Projection represents a projected column in a query.
@@ -52,7 +52,7 @@ type Projections []Projection
 // Selector represents a database selector.
 type Selector struct {
 	Table     string
-	Field     string
+	Column    string
 	Predicate Predicate
 	Value     any
 }
@@ -69,7 +69,7 @@ type Selectors []Selector
 //   - *Selector: The selector
 func (s Selectors) GetByField(field string) *Selector {
 	for j := range s {
-		if s[j].Field == field {
+		if s[j].Column == field {
 			return &s[j]
 		}
 	}
@@ -84,15 +84,15 @@ func (s Selectors) GetByField(field string) *Selector {
 // Returns:
 //   - []Selector: A list of selectors
 func (s Selectors) GetByFields(fields ...string) []Selector {
-	selectors := []Selector{}
-	for f := range fields {
-		for j := range s {
-			if s[j].Field == fields[f] {
-				selectors = append(selectors, s[j])
+	var result []Selector
+	for _, field := range fields {
+		for i := range s {
+			if s[i].Column == field {
+				result = append(result, s[i])
 			}
 		}
 	}
-	return selectors
+	return result
 }
 
 // UpdateField is the options struct used for update queries.

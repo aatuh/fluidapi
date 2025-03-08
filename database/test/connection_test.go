@@ -137,7 +137,7 @@ func TestGetDSN(t *testing.T) {
 		{
 			name: "Postgres DSN",
 			cfg: database.ConnectConfig{
-				Driver:     database.Postgres,
+				Driver:     database.PostgreSQL,
 				User:       "user",
 				Password:   "pass",
 				Host:       "localhost",

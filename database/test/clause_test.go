@@ -11,15 +11,15 @@ import (
 // is found.
 func TestGetByField_Found(t *testing.T) {
 	selectors := database.Selectors{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Column: "id", Predicate: "=", Value: 1},
+		{Table: "user", Column: "name", Predicate: "=", Value: "Alice"},
 	}
 
 	selector := selectors.GetByField("name")
 
 	assert.NotNil(t, selector)
 	assert.Equal(t, "user", selector.Table)
-	assert.Equal(t, "name", selector.Field)
+	assert.Equal(t, "name", selector.Column)
 	assert.Equal(t, "=", string(selector.Predicate))
 	assert.Equal(t, "Alice", selector.Value)
 }
@@ -28,8 +28,8 @@ func TestGetByField_Found(t *testing.T) {
 // field is not found.
 func TestGetByField_NotFound(t *testing.T) {
 	selectors := database.Selectors{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Column: "id", Predicate: "=", Value: 1},
+		{Table: "user", Column: "name", Predicate: "=", Value: "Alice"},
 	}
 
 	selector := selectors.GetByField("age")
@@ -41,24 +41,24 @@ func TestGetByField_NotFound(t *testing.T) {
 // fields are found.
 func TestGetByFields_Found(t *testing.T) {
 	selectors := database.Selectors{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
-		{Table: "user", Field: "age", Predicate: ">", Value: 25},
+		{Table: "user", Column: "id", Predicate: "=", Value: 1},
+		{Table: "user", Column: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Column: "age", Predicate: ">", Value: 25},
 	}
 
 	resultSelectors := selectors.GetByFields("name", "age")
 
 	assert.Len(t, resultSelectors, 2)
-	assert.Equal(t, "name", resultSelectors[0].Field)
-	assert.Equal(t, "age", resultSelectors[1].Field)
+	assert.Equal(t, "name", resultSelectors[0].Column)
+	assert.Equal(t, "age", resultSelectors[1].Column)
 }
 
 // TestGetByFields_NotFound tests the case where none of the selectors with the
 // given fields are found.
 func TestGetByFields_NotFound(t *testing.T) {
 	selectors := database.Selectors{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Column: "id", Predicate: "=", Value: 1},
+		{Table: "user", Column: "name", Predicate: "=", Value: "Alice"},
 	}
 
 	resultSelectors := selectors.GetByFields("age", "address")
@@ -70,13 +70,13 @@ func TestGetByFields_NotFound(t *testing.T) {
 // given fields are found.
 func TestGetByFields_PartialFound(t *testing.T) {
 	selectors := database.Selectors{
-		{Table: "user", Field: "id", Predicate: "=", Value: 1},
-		{Table: "user", Field: "name", Predicate: "=", Value: "Alice"},
-		{Table: "user", Field: "age", Predicate: ">", Value: 25},
+		{Table: "user", Column: "id", Predicate: "=", Value: 1},
+		{Table: "user", Column: "name", Predicate: "=", Value: "Alice"},
+		{Table: "user", Column: "age", Predicate: ">", Value: 25},
 	}
 
 	resultSelectors := selectors.GetByFields("name", "address")
 
 	assert.Len(t, resultSelectors, 1)
-	assert.Equal(t, "name", resultSelectors[0].Field)
+	assert.Equal(t, "name", resultSelectors[0].Column)
 }

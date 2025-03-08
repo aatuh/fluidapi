@@ -5,16 +5,18 @@ import (
 	"time"
 )
 
+// Supported drivers.
 const (
-	TCP      = "tcp"      // TCP connection type
-	Unix     = "unix"     // Unix socket connection type
-	MySQL    = "mysql"    // MySQL driver name
-	Postgres = "postgres" // PostgreSQL driver name
-	SQLite3  = "sqlite3"  // SQLite3 driver name
+	MySQL      = "mysql"      // MySQL driver name
+	PostgreSQL = "postgresql" // PostgreSQL driver name
+	SQLite3    = "sqlite3"    // SQLite3 driver name
 )
 
-// DriverFactory is a function that creates a database driver.
-type DriverFactory func(driver string, dsn string) (DB, error)
+// Supported connection types.
+const (
+	TCP  = "tcp"  // TCP connection type
+	Unix = "unix" // Unix socket connection type
+)
 
 // ConnectConfig holds the configuration for the database connection.
 type ConnectConfig struct {
@@ -22,7 +24,7 @@ type ConnectConfig struct {
 	Password        string        // Database password
 	Host            string        // Database host
 	Port            int           // Database port
-	Database        string        // Database name
+	Database        string        // Database name (e.g. "users")
 	SocketDirectory string        // Unix socket directory
 	SocketName      string        // Unix socket name
 	Parameters      string        // Connection parameters
@@ -41,44 +43,48 @@ type ConnectConfig struct {
 	DSNFormat string
 }
 
+// DriverFactory is a function that creates a database driver.
+type DriverFactory func(driver string, dsn string) (DB, error)
+
 // Connect establishes a connection to the database using the provided
-// configuration.
+// configuration. It will automatically configure the connection based on the
+// provided configuration and then attempt to ping the database.
 //
+// Parameters:
 //   - cfg: The configuration for the database connection.
 //   - dbFactory: The factory function to create the database driver.
 //   - dsn: The database connection string.
 //
-// Returns: the open database (DB) or an error.
+// Returns:
+//   - DB: The database connection.
+//   - error: An error if the connection fails.
 func Connect(
-	cfg ConnectConfig,
-	dbFactory DriverFactory,
-	dsn string,
+	cfg ConnectConfig, dbFactory DriverFactory, dsn string,
 ) (DB, error) {
 	db, err := dbFactory(cfg.Driver, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
-
 	configureConnection(db, cfg)
-
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-
 	return db, nil
 }
 
 // DSN generates a database connection string based on the provided
-// configuration.
+// configuration. If cfg.DSNFormat is non-empty, DSN() uses that format via
+// fmt.Sprintf. Else it falls back to determining DSN for known drivers.
 //
+// Parameters:
 //   - cfg: The configuration for the database connection.
 //
-// If cfg.DSNFormat is non-empty, DSN() uses that format via fmt.Sprintf.
-// Else it falls back to a basic switch-based approach for known drivers.
+// Returns:
+//   - *string: A pointer to the generated DSN string.
+//   - error: An error if the DSN generation fails.
 func DSN(cfg ConnectConfig) (*string, error) {
 	var dsn string
-
-	// If a DSNFormat is explicitly set, use that first.
+	// If DSNFormat is set, use it.
 	if cfg.DSNFormat != "" {
 		dsn = fmt.Sprintf(
 			cfg.DSNFormat,
@@ -91,64 +97,82 @@ func DSN(cfg ConnectConfig) (*string, error) {
 		)
 		return &dsn, nil
 	}
-
-	// Otherwise, fallback to default building per driver.
+	// Otherwise, build the DSN based on the driver.
+	var err error
 	switch cfg.Driver {
 	case MySQL:
-		// e.g., "user:pass@tcp(host:port)/dbname?param=value"
-		connType := cfg.ConnectionType
-		if connType == "" {
-			connType = TCP // default
-		}
-		if connType == TCP {
-			dsn = fmt.Sprintf(
-				"%s:%s@tcp(%s:%d)/%s?%s",
-				cfg.User,
-				cfg.Password,
-				cfg.Host,
-				cfg.Port,
-				cfg.Database,
-				cfg.Parameters,
-			)
-		} else if connType == Unix {
-			dsn = fmt.Sprintf(
-				"%s:%s@unix(%s/%s)/%s?%s",
-				cfg.User,
-				cfg.Password,
-				cfg.SocketDirectory,
-				cfg.SocketName,
-				cfg.Database,
-				cfg.Parameters,
-			)
-		} else {
-			return nil, fmt.Errorf("unsupported connection type: %s", connType)
-		}
+		dsn, err = dsnForMySQL(cfg)
+	case PostgreSQL:
+		dsn, err = dsnForPostgreSQL(cfg)
+	case SQLite3:
+		dsn, err = dsnForSQLite3(cfg)
+	default:
+		return nil, fmt.Errorf("unsupported driver: %s", cfg.Driver)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &dsn, nil
+}
 
-	case Postgres:
-		// e.g., "postgres://user:pass@host:port/dbname?param=value"
-		dsn = fmt.Sprintf(
-			"postgres://%s:%s@%s:%d/%s?%s",
+// dsnForMySQL builds a DSN for MySQL.
+func dsnForMySQL(cfg ConnectConfig) (string, error) {
+	connType := cfg.ConnectionType
+	if connType == "" {
+		connType = TCP
+	}
+	switch connType {
+	case TCP:
+		if cfg.Host == "" || cfg.Port == 0 || cfg.Database == "" {
+			return "", fmt.Errorf("missing required MySQL TCP fields")
+		}
+		return fmt.Sprintf(
+			"%s:%s@tcp(%s:%d)/%s?%s",
 			cfg.User,
 			cfg.Password,
 			cfg.Host,
 			cfg.Port,
 			cfg.Database,
 			cfg.Parameters,
-		)
-
-	case SQLite3:
-		// e.g. "filename.db?some=params"
-		// or ":memory:?some=params"
-		dsn = cfg.Database
-		if cfg.Parameters != "" {
-			dsn += "?" + cfg.Parameters
+		), nil
+	case Unix:
+		if cfg.SocketDirectory == "" || cfg.SocketName == "" || cfg.Database == "" {
+			return "", fmt.Errorf("missing required MySQL Unix fields")
 		}
-
+		return fmt.Sprintf(
+			"%s:%s@unix(%s/%s)/%s?%s",
+			cfg.User,
+			cfg.Password,
+			cfg.SocketDirectory,
+			cfg.SocketName,
+			cfg.Database,
+			cfg.Parameters,
+		), nil
 	default:
-		return nil, fmt.Errorf("unsupported driver: %s", cfg.Driver)
+		return "", fmt.Errorf("unsupported connection type: %s", connType)
 	}
+}
 
-	return &dsn, nil
+// dsnForPostgres builds a DSN for PostgreSQL.
+func dsnForPostgreSQL(cfg ConnectConfig) (string, error) {
+	if cfg.Host == "" || cfg.Port == 0 || cfg.Database == "" {
+		return "", fmt.Errorf("missing required Postgres fields")
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port,
+		cfg.Database, cfg.Parameters), nil
+}
+
+// dsnForSQLite3 builds a DSN for SQLite3.
+func dsnForSQLite3(cfg ConnectConfig) (string, error) {
+	if cfg.Database == "" {
+		return "", fmt.Errorf("database name is required for SQLite3")
+	}
+	dsn := cfg.Database
+	if cfg.Parameters != "" {
+		dsn += "?" + cfg.Parameters
+	}
+	return dsn, nil
 }
 
 // configureConnection sets up the runtime connection limits.
