@@ -14,6 +14,27 @@ type Definition struct {
 	Handler http.HandlerFunc // Optional handler for the endpoint.
 }
 
+// NewDefinition creates a new endpoint definition.
+//
+// Parameters:
+//   - url: The URL of the endpoint.
+//   - method: The HTTP method of the endpoint.
+//   - stack: The middleware stack for the endpoint.
+//   - handler: The optional handler for the endpoint.
+//
+// Returns:
+//   - *Definition: A new endpoint definition.
+func NewDefinition(
+	url string, method string, stack *Stack, handler http.HandlerFunc,
+) *Definition {
+	return &Definition{
+		URL:     url,
+		Method:  method,
+		Stack:   stack,
+		Handler: handler,
+	}
+}
+
 // Option is a function that modifies a definition when it is cloned.
 type Option func(*Definition)
 
