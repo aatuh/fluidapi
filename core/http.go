@@ -22,6 +22,7 @@ const (
 	EventErrorStart       = "error_start"
 	EventShutDownStarted  = "shutdown_started"
 	EventShutDown         = "shutdown"
+	EventShutDownError    = "shutdown_error"
 )
 
 // HTTPServer represents an HTTP server.
@@ -35,7 +36,9 @@ type Logger interface {
 	Printf(format string, v ...any)
 }
 
-// DefaultHTTPServer returns the default HTTP server implementation.
+// DefaultHTTPServer returns the default HTTP server implementation. It sets
+// default request read and write timeouts of 10 seconds, idle timeout of 60
+// seconds, and a max header size of 64KB.
 //
 // Parameters:
 //   - serverHandler: HTTP server handler.
@@ -45,13 +48,15 @@ type Logger interface {
 // Returns:
 //   - IServer: Server implementation.
 func DefaultHTTPServer(
-	serverHandler *ServerHandler,
-	port int,
-	httpEndpoints []Endpoint,
+	serverHandler *ServerHandler, port int, httpEndpoints []Endpoint,
 ) HTTPServer {
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: serverHandler.setupMux(httpEndpoints),
+		Addr:           fmt.Sprintf(":%d", port),
+		Handler:        serverHandler.setupMux(httpEndpoints),
+		ReadTimeout:    10 * time.Second, // Limits slow clients.
+		WriteTimeout:   10 * time.Second, // Ensures fast responses.
+		IdleTimeout:    60 * time.Second, // Keeps alive long enough.
+		MaxHeaderBytes: 1 << 16,          // 64KB to prevent excessive memory use.
 	}
 }
 
@@ -115,64 +120,48 @@ func NewHTTPServerHandler(
 func (s *ServerHandler) startServer(
 	stopChan chan os.Signal, server HTTPServer, shutdownTimeout time.Duration,
 ) error {
-	// Listen for shutdown signals
+	// Prepare channel for shutdown signal.
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
-
-	// Capture the error from ListenAndServe
 	errChan := make(chan error, 1)
 
 	go func() {
-		if s.eventEmitter != nil {
-			s.eventEmitter.Emit(NewEvent(
-				EventStart, "Starting HTTP server",
-			))
-		} else {
-			s.logger.Printf("Starting HTTP server")
-		}
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			if s.eventEmitter != nil {
-				s.eventEmitter.Emit(NewEvent(
-					EventErrorStart,
-					fmt.Sprintf("Error starting HTTP server: %v", err),
-				).WithData(err))
-			} else {
-				log.Printf("Error starting HTTP server: %v", err)
-			}
-			errChan <- err
-			stopChan <- os.Interrupt
-		} else {
-			errChan <- nil
-		}
+		s.listenAndServe(server, errChan, stopChan)
 	}()
 
-	// Wait for a signal to shut down
+	// Wait for shutdown signal.
 	<-stopChan
 
-	if s.eventEmitter != nil {
-		s.eventEmitter.Emit(NewEvent(
-			EventShutDownStarted, "Shutting down HTTP server",
-		))
-	} else {
-		s.logger.Printf("Shutting down HTTP server")
-	}
-
-	// Give the server some time to shut down
+	// Give the server some time to shut down.
+	s.emitOrLogEvent(EventShutDownStarted, "Shutting down HTTP server", nil)
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		return err
+		s.emitOrLogEvent(EventShutDownError, "HTTP server shutdown error", err)
+		return fmt.Errorf("startServer: shutdown error: %v", err)
 	}
 
-	if s.eventEmitter != nil {
-		s.eventEmitter.Emit(NewEvent(
-			EventShutDown, "HTTP server shutdown",
-		))
-	} else {
-		s.logger.Printf("HTTP server shutdown")
-	}
+	s.emitOrLogEvent(EventShutDown, "HTTP server shutdown", nil)
 	return <-errChan
+}
+
+// listenAndServe listens and serves the HTTP server.
+func (s *ServerHandler) listenAndServe(
+	server HTTPServer, errChan chan error, stopChan chan os.Signal,
+) {
+	s.emitOrLogEvent(EventStart, "Starting HTTP server", nil)
+	err := server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		s.emitOrLogEvent(
+			EventErrorStart,
+			fmt.Sprintf("Error starting HTTP server: %v", err),
+			err,
+		)
+		errChan <- err
+		stopChan <- os.Interrupt
+	} else {
+		errChan <- nil
+	}
 }
 
 // setupMux sets up the HTTP mux with the specified endpoints.
@@ -183,13 +172,11 @@ func (s *ServerHandler) setupMux(
 	endpoints := s.multiplexEndpoints(httpEndpoints)
 
 	for url := range endpoints {
-		if s.eventEmitter != nil {
-			s.eventEmitter.Emit(NewEvent(EventRegisterURL, url).
-				WithData(mapKeys(endpoints[url])),
-			)
-		} else {
-			s.logger.Printf("Registering URL: %s", url)
-		}
+		s.emitOrLogEvent(
+			EventRegisterURL,
+			fmt.Sprintf("Registering URL: %s", url),
+			mapKeys(endpoints[url]),
+		)
 		iterUrl := url
 		mux.Handle(iterUrl, s.createEndpointHandler(endpoints[iterUrl]))
 	}
@@ -208,18 +195,11 @@ func (s *ServerHandler) createEndpointHandler(
 			handler.ServeHTTP(w, r)
 			return
 		}
-		if s.eventEmitter != nil {
-			s.eventEmitter.Emit(
-				NewEvent(
-					EventMethodNotAllowed,
-					fmt.Sprintf(
-						"Method not allowed: %s (%v)", r.URL.Path, r.Method,
-					),
-				).WithData([]string{r.URL.Path, r.Method}),
-			)
-		} else {
-			s.logger.Printf("Method not allowed: %s (%v)", r.URL.Path, r.Method)
-		}
+		s.emitOrLogEvent(
+			EventMethodNotAllowed,
+			fmt.Sprintf("Method not allowed: %s (%v)", r.URL.Path, r.Method),
+			[]string{r.URL.Path, r.Method},
+		)
 		http.Error(
 			w,
 			http.StatusText(http.StatusMethodNotAllowed),
@@ -231,16 +211,11 @@ func (s *ServerHandler) createEndpointHandler(
 // createNotFoundHandler creates an HTTP handler for not found requests.
 func (s *ServerHandler) createNotFoundHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if s.eventEmitter != nil {
-			s.eventEmitter.Emit(
-				NewEvent(
-					EventNotFound,
-					fmt.Sprintf("Not found: %s (%v)", r.URL.Path, r.Method),
-				).WithData([]string{r.URL.Path, r.Method}),
-			)
-		} else {
-			s.logger.Printf("Not found: %s (%v)", r.URL.Path, r.Method)
-		}
+		s.emitOrLogEvent(
+			EventNotFound,
+			fmt.Sprintf("Not found: %s (%v)", r.URL.Path, r.Method),
+			[]string{r.URL.Path, r.Method},
+		)
 		http.Error(
 			w,
 			http.StatusText(http.StatusNotFound),
@@ -255,23 +230,37 @@ func (s *ServerHandler) multiplexEndpoints(
 ) map[string]map[string]http.Handler {
 	multiplexed := make(map[string]map[string]http.Handler)
 	for _, endpoint := range endpoints {
-		if multiplexed[endpoint.URL] == nil {
-			multiplexed[endpoint.URL] = make(map[string]http.Handler)
-		}
-		var baseHandler http.Handler
-		if endpoint.Handler != nil {
-			baseHandler = http.HandlerFunc(endpoint.Handler)
-		} else {
-			// Fallback to a default no-op handler.
-			baseHandler = http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {},
-			)
-		}
-		multiplexed[endpoint.URL][endpoint.Method] = s.serverPanicHandler(
-			ApplyMiddlewares(baseHandler, endpoint.Middlewares...),
-		)
+		s.multiplexEndpoint(endpoint, multiplexed)
 	}
 	return multiplexed
+}
+
+// multiplexEndpoint multiplexes an endpoint by URL and method.
+func (s *ServerHandler) multiplexEndpoint(
+	endpoint Endpoint, multiplexed map[string]map[string]http.Handler,
+) {
+	if multiplexed[endpoint.URL] == nil {
+		multiplexed[endpoint.URL] = make(map[string]http.Handler)
+	}
+
+	multiplexed[endpoint.URL][endpoint.Method] = s.serverPanicHandler(
+		ApplyMiddlewares(
+			emptyOrCustomHandler(endpoint), endpoint.Middlewares...,
+		),
+	)
+}
+
+// emptyOrCustomHandler determines the HTTP handler for the endpoint.
+func emptyOrCustomHandler(endpoint Endpoint) http.Handler {
+	if endpoint.Handler != nil {
+		// Use the provided handler.
+		return http.HandlerFunc(endpoint.Handler)
+	} else {
+		// Fallback to a default no-op handler.
+		return http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {},
+		)
+	}
 }
 
 // serverPanicHandler returns an HTTP handler that recovers from panics.
@@ -279,44 +268,47 @@ func (s *ServerHandler) serverPanicHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				if s.eventEmitter != nil {
-					s.eventEmitter.Emit(
-						NewEvent(
-							EventPanic,
-							fmt.Sprintf("Server panic: %v", err),
-						).WithData(stackTraceSlice()),
-					)
-				} else {
-					s.logger.Printf("Server panic: %v", err)
-				}
-				http.Error(
-					w,
-					http.StatusText(http.StatusInternalServerError),
-					http.StatusInternalServerError,
-				)
+				s.panicRecovery(w, err)
 			}
 		}()
 		next.ServeHTTP(w, r)
 	})
 }
 
+// panicRecovery handles recovery from panics.
+func (s *ServerHandler) panicRecovery(w http.ResponseWriter, err any) {
+	s.emitOrLogEvent(
+		EventPanic, fmt.Sprintf("Server panic: %v", err), stackTraceSlice(),
+	)
+	http.Error(
+		w,
+		http.StatusText(http.StatusInternalServerError),
+		http.StatusInternalServerError,
+	)
+}
+
+// emitOrLogEvent emits an event if available, otherwise logs the message.
+func (s *ServerHandler) emitOrLogEvent(
+	eventType EventType, msg string, data any,
+) {
+	if s.eventEmitter != nil {
+		s.eventEmitter.Emit(NewEvent(eventType, msg).WithData(data))
+	} else {
+		s.logger.Printf(msg)
+	}
+}
+
 // stackTraceSlice returns the stack trace as a slice of strings.
 func stackTraceSlice() []string {
-	var stackTrace []string
-	var skip int
-	for {
-		pc, file, line, ok := runtime.Caller(skip)
+	var trace []string
+	for i := 0; ; i++ {
+		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
-			break
+			return trace
 		}
-		// Get the function name and format entry.
 		fn := runtime.FuncForPC(pc)
-		entry := fmt.Sprintf("%s:%d %s", file, line, fn.Name())
-		stackTrace = append(stackTrace, entry)
-
-		skip++
+		trace = append(trace, fmt.Sprintf("%s:%d %s", file, line, fn.Name()))
 	}
-	return stackTrace
 }
 
 // mapKeys returns the keys of a map.

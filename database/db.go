@@ -44,6 +44,7 @@ type Stmt interface {
 // Rows wraps *sql.Rows for scanning multiple results.
 type Rows interface {
 	Next() bool
+	// Scan scans the rows into dest values.
 	Scan(dest ...any) error
 	Close() error
 	Err() error
@@ -51,6 +52,7 @@ type Rows interface {
 
 // Row wraps *sql.Row for scanning a single result.
 type Row interface {
+	// Scan scans the row into dest values.
 	Scan(dest ...any) error
 	Err() error
 }
@@ -78,6 +80,13 @@ type Getter interface {
 	TableNamer
 	// ScanRow should populate the entity from the given Row.
 	ScanRow(row Row) error
+}
+
+// CRUDEntity is a helper constraint for entities that can be inserted,
+// retrieved, and updated.
+type CRUDEntity interface {
+	Mutator
+	Getter
 }
 
 // ErrorChecker translates database-specific errors into application errors.

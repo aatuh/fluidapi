@@ -12,6 +12,8 @@ const (
 	LessOrEqual    Predicate = "<="
 	In             Predicate = "IN"
 	NotIn          Predicate = "NOT IN"
+	Like           Predicate = "LIKE"
+	NotLike        Predicate = "NOT LIKE"
 )
 
 // OrderDirection is used to specify the order of the result set.
@@ -57,8 +59,64 @@ type Selector struct {
 	Value     any
 }
 
+// NewSelector creates a new selector with the given parameters.
+//
+// Parameters:
+//   - column: the column name
+//   - predicate: the predicate
+//   - value: the value
+//
+// Returns:
+//   - *Selector: The new selector
+func NewSelector(column string, predicate Predicate, value any) *Selector {
+	return &Selector{
+		Column:    column,
+		Predicate: predicate,
+		Value:     value,
+	}
+}
+
+// WithTable returns a new selector with the provided table name.
+//
+// Parameters:
+//   - table: the table name
+//
+// Returns:
+//   - *Selector: The new selector
+func (s *Selector) WithTable(table string) *Selector {
+	newSelector := *s
+	newSelector.Table = table
+	return &newSelector
+}
+
 // Selectors represents a list of database selectors.
 type Selectors []Selector
+
+// NewSelectors returns a new list of selectors.
+//
+// Parameters:
+//   - selectors: The selectors
+//
+// Returns:
+//   - Selectors: The new list of selectors
+func NewSelectors(selectors ...Selector) Selectors {
+	return selectors
+}
+
+// Add adds a new selector to the list.
+//
+// Parameters:
+//   - column: The column name
+//   - predicate: The predicate
+//   - value: The value
+//
+// Returns:
+//   - Selectors: The new list of selectors
+func (s Selectors) Add(
+	column string, predicate Predicate, value any,
+) Selectors {
+	return append(s, *NewSelector(column, predicate, value))
+}
 
 // GetByField returns selector with the given field.
 //
@@ -95,14 +153,52 @@ func (s Selectors) GetByFields(fields ...string) []Selector {
 	return result
 }
 
-// UpdateField is the options struct used for update queries.
-type UpdateField struct {
+// Update is the options struct used for update queries.
+type Update struct {
 	Field string
 	Value any
 }
 
-// UpdateFields is a list of update fields
-type UpdateFields []UpdateField
+// NewUpdate creates a new update field.
+//
+// Parameters:
+//   - field: The field
+//   - value: The value
+//
+// Returns:
+//   - Update: The new update field
+func NewUpdate(field string, value any) Update {
+	return Update{
+		Field: field,
+		Value: value,
+	}
+}
+
+// Updates is a list of update fields
+type Updates []Update
+
+// NewUpdates creates a new list of updates
+//
+// Parameters:
+//   - updates: The updates
+//
+// Returns:
+//   - Updates: The new list of updates
+func NewUpdates(updates ...Update) Updates {
+	return updates
+}
+
+// Add adds a new update field to the list.
+//
+// Parameters:
+//   - field: The field
+//   - value: The value
+//
+// Returns:
+//   - Updates: The new list of updates
+func (u Updates) Add(field string, value any) Updates {
+	return append(u, Update{Field: field, Value: value})
+}
 
 // Page is used to specify the page of the result set.
 type Page struct {

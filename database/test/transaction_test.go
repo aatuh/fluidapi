@@ -17,7 +17,7 @@ package test
 // 	mockTx := new(mock.MockTx)
 
 // 	// Mock the transactional function to return a successful result
-// 	transactionalFunc := func(ctx context.Context, tx database.Tx) (string, error) {
+// 	txFn := func(ctx context.Context, tx database.Tx) (string, error) {
 // 		return "success", nil
 // 	}
 
@@ -25,7 +25,7 @@ package test
 // 	mockTx.On("Commit").Return(nil).Once()
 
 // 	ctx := util.NewContext(context.Background())
-// 	result, err := database.Transaction(ctx, mockTx, transactionalFunc)
+// 	result, err := database.Transaction(ctx, mockTx, txFn)
 
 // 	assert.Nil(t, err)
 // 	assert.Equal(t, "success", result)
@@ -38,7 +38,7 @@ package test
 // 	mockTx := new(mock.MockTx)
 
 // 	// Mock the transactional function to return an error
-// 	transactionalFunc := func(ctx context.Context, tx database.Tx) (string, error) {
+// 	txFn := func(ctx context.Context, tx database.Tx) (string, error) {
 // 		return "", errors.New("application error")
 // 	}
 
@@ -46,7 +46,7 @@ package test
 // 	mockTx.On("Rollback").Return(nil).Once()
 
 // 	ctx := util.NewContext(context.Background())
-// 	result, err := database.Transaction(ctx, mockTx, transactionalFunc)
+// 	result, err := database.Transaction(ctx, mockTx, txFn)
 
 // 	assert.Equal(t, "", result)
 // 	assert.EqualError(t, err, "application error")
@@ -59,7 +59,7 @@ package test
 // 	mockTx := new(mock.MockTx)
 
 // 	// Mock the transactional function to return an error
-// 	transactionalFunc := func(ctx context.Context, tx database.Tx) (string, error) {
+// 	txFn := func(ctx context.Context, tx database.Tx) (string, error) {
 // 		return "", nil
 // 	}
 
@@ -67,7 +67,7 @@ package test
 // 	mockTx.On("Commit").Return(errors.New("commit error")).Once()
 
 // 	ctx := util.NewContext(context.Background())
-// 	result, err := database.Transaction(ctx, mockTx, transactionalFunc)
+// 	result, err := database.Transaction(ctx, mockTx, txFn)
 
 // 	assert.Equal(t, "", result)
 // 	assert.EqualError(t, err, "failed to commit transaction: commit error")

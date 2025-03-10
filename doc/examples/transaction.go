@@ -1,4 +1,4 @@
-package examples
+package main
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/pakkasys/fluidapi/database"
 )
 
-func main() {
+func RunDatabase() {
 	cfg := database.ConnectConfig{
 		Driver:   database.SQLite3,
 		Database: "example.db",
@@ -25,11 +25,11 @@ func main() {
 	}
 
 	result, err := database.Transaction(context.Background(), tx, func(ctx context.Context, tx database.Tx) (int64, error) {
-		res, err := tx.Exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)")
+		_, err := tx.Exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)")
 		if err != nil {
 			return 0, err
 		}
-		res, err = tx.Exec("INSERT INTO users (name) VALUES (?)", "Bob")
+		res, err := tx.Exec("INSERT INTO users (name) VALUES (?)", "Bob")
 		if err != nil {
 			return 0, err
 		}

@@ -16,7 +16,6 @@ type Endpoint struct {
 //   - url: The URL of the endpoint.
 //   - method: The HTTP method of the endpoint.
 //   - middlewares: The middlewares to apply to the endpoint.
-//   - handler: The optional handler for the endpoint.
 //
 // Returns:
 //   - Endpoint: A new Endpoint instance.
@@ -24,12 +23,23 @@ func NewEndpoint(
 	url string,
 	method string,
 	middlewares []Middleware,
-	handler http.HandlerFunc,
-) Endpoint {
-	return Endpoint{
+) *Endpoint {
+	return &Endpoint{
 		URL:         url,
 		Method:      method,
 		Middlewares: middlewares,
-		Handler:     handler,
 	}
+}
+
+// WithHandler sets the handler for the endpoint. It returns a new endpoint.
+//
+// Parameters:
+//   - handler: The handler for the endpoint.
+//
+// Returns:
+//   - Endpoint: A new endpoint.
+func (e *Endpoint) WithHandler(handler http.HandlerFunc) *Endpoint {
+	newEndpoint := *e
+	newEndpoint.Handler = handler
+	return &newEndpoint
 }

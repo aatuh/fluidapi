@@ -1,19 +1,20 @@
-package examples
+package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/pakkasys/fluidapi/core"
 )
 
-func main() {
+func RunEmitter() {
 	var eventEmitter *core.EventEmitter
 	var logger core.Logger
 
 	// Comment one or both to run the server without them.
-	eventEmitter = SetupEventEmitter()
-	logger = NewLogger()
+	eventEmitter = setupEventEmitter()
+	logger = newLogger()
 
 	handler := core.NewHTTPServerHandler(eventEmitter, logger)
 
@@ -22,6 +23,7 @@ func main() {
 			URL:    "/hello",
 			Method: http.MethodGet,
 			Handler: func(w http.ResponseWriter, r *http.Request) {
+				log.Println("Incoming request")
 				fmt.Fprintf(w, "Hello, Fluid API!")
 			},
 		},
@@ -34,7 +36,7 @@ func main() {
 	}
 }
 
-func SetupEventEmitter() *core.EventEmitter {
+func setupEventEmitter() *core.EventEmitter {
 	eventEmitter := core.NewEventEmitter()
 	eventEmitter.RegisterListener(
 		core.EventStart,
@@ -45,12 +47,12 @@ func SetupEventEmitter() *core.EventEmitter {
 	return eventEmitter
 }
 
-type Logger struct{}
+type logger struct{}
 
-func NewLogger() *Logger {
-	return &Logger{}
+func newLogger() *logger {
+	return &logger{}
 }
 
-func (l *Logger) Printf(format string, v ...any) {
+func (l *logger) Printf(format string, v ...any) {
 	fmt.Printf(format, v...)
 }

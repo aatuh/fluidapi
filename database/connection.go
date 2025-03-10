@@ -63,11 +63,11 @@ func Connect(
 ) (DB, error) {
 	db, err := dbFactory(cfg.Driver, dsn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, fmt.Errorf("Connect: failed to open database: %w", err)
 	}
 	configureConnection(db, cfg)
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		return nil, fmt.Errorf("Connect: failed to ping database: %w", err)
 	}
 	return db, nil
 }
@@ -107,10 +107,10 @@ func DSN(cfg ConnectConfig) (*string, error) {
 	case SQLite3:
 		dsn, err = dsnForSQLite3(cfg)
 	default:
-		return nil, fmt.Errorf("unsupported driver: %s", cfg.Driver)
+		return nil, fmt.Errorf("DSN: unsupported driver: %s", cfg.Driver)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("DSN: failed to generate DSN: %w", err)
 	}
 	return &dsn, nil
 }
@@ -123,50 +123,95 @@ func dsnForMySQL(cfg ConnectConfig) (string, error) {
 	}
 	switch connType {
 	case TCP:
-		if cfg.Host == "" || cfg.Port == 0 || cfg.Database == "" {
-			return "", fmt.Errorf("missing required MySQL TCP fields")
-		}
-		return fmt.Sprintf(
-			"%s:%s@tcp(%s:%d)/%s?%s",
-			cfg.User,
-			cfg.Password,
-			cfg.Host,
-			cfg.Port,
-			cfg.Database,
-			cfg.Parameters,
-		), nil
+		return dsnForMySQLTCP(cfg)
 	case Unix:
-		if cfg.SocketDirectory == "" || cfg.SocketName == "" || cfg.Database == "" {
-			return "", fmt.Errorf("missing required MySQL Unix fields")
-		}
-		return fmt.Sprintf(
-			"%s:%s@unix(%s/%s)/%s?%s",
-			cfg.User,
-			cfg.Password,
-			cfg.SocketDirectory,
-			cfg.SocketName,
-			cfg.Database,
-			cfg.Parameters,
-		), nil
+		return dsnForMySQLUnix(cfg)
 	default:
-		return "", fmt.Errorf("unsupported connection type: %s", connType)
+		return "", fmt.Errorf(
+			"dsnForMySQL: unsupported connection type: %s", connType,
+		)
 	}
+}
+
+// dsnForMySQLTCP builds a DSN for MySQL over TCP socket.
+func dsnForMySQLTCP(cfg ConnectConfig) (dsn string, err error) {
+	if cfg.Host == "" {
+		return "", fmt.Errorf("dsnForMySQL: missing required MySQL host field")
+	}
+	if cfg.Port == 0 {
+		return "", fmt.Errorf("dsnForMySQL: missing required MySQL port field")
+	}
+	if cfg.Database == "" {
+		return "", fmt.Errorf("dsnForMySQL: missing required MySQL database field")
+	}
+
+	dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?%s",
+		cfg.User,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.Database,
+		cfg.Parameters)
+	return dsn, nil
+}
+
+// dsnForMySQLUnix builds a DSN for MySQL over Unix socket.
+func dsnForMySQLUnix(cfg ConnectConfig) (string, error) {
+	if cfg.SocketDirectory == "" {
+		return "", fmt.Errorf("dsnForMySQL: missing required MySQL socket directory field")
+	}
+	if cfg.SocketName == "" {
+		return "", fmt.Errorf("dsnForMySQL: missing required MySQL socket name field")
+	}
+	if cfg.Database == "" {
+		return "", fmt.Errorf("dsnForMySQL: missing required MySQL database field")
+	}
+
+	return fmt.Sprintf(
+		"%s:%s@unix(%s/%s)/%s?%s",
+		cfg.User,
+		cfg.Password,
+		cfg.SocketDirectory,
+		cfg.SocketName,
+		cfg.Database,
+		cfg.Parameters,
+	), nil
 }
 
 // dsnForPostgres builds a DSN for PostgreSQL.
 func dsnForPostgreSQL(cfg ConnectConfig) (string, error) {
-	if cfg.Host == "" || cfg.Port == 0 || cfg.Database == "" {
-		return "", fmt.Errorf("missing required Postgres fields")
+	if cfg.Host == "" {
+		return "", fmt.Errorf(
+			"dsnForPostgreSQL: missing required PostgreSQL host field",
+		)
 	}
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port,
-		cfg.Database, cfg.Parameters), nil
+	if cfg.Port == 0 {
+		return "", fmt.Errorf(
+			"dsnForPostgreSQL: missing required PostgreSQL port field",
+		)
+	}
+	if cfg.Database == "" {
+		return "", fmt.Errorf(
+			"dsnForPostgreSQL: missing required PostgreSQL database field",
+		)
+	}
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?%s",
+		cfg.User,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.Database,
+		cfg.Parameters,
+	), nil
 }
 
 // dsnForSQLite3 builds a DSN for SQLite3.
 func dsnForSQLite3(cfg ConnectConfig) (string, error) {
 	if cfg.Database == "" {
-		return "", fmt.Errorf("database name is required for SQLite3")
+		return "", fmt.Errorf(
+			"dsnForSQLite3: database name is required for SQLite3",
+		)
 	}
 	dsn := cfg.Database
 	if cfg.Parameters != "" {

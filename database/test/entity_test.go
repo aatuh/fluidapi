@@ -1198,7 +1198,7 @@ package test
 // 			mockResult *databasemock.MockResult,
 // 			mockErrorChecker *databasemock.MockErrorChecker,
 // 		)
-// 		updateFields  []types.UpdateField
+// 		updates  []types.Update
 // 		selectors     []types.Selector
 // 		expectedRows  int64
 // 		expectedError string
@@ -1216,7 +1216,7 @@ package test
 // 				mockStmt.On("Close").Return(nil)
 // 				mockResult.On("RowsAffected").Return(int64(2), nil)
 // 			},
-// 			updateFields: []types.UpdateField{
+// 			updates: []types.Update{
 // 				{Field: "name", Value: "Alice"},
 // 			},
 // 			selectors: []types.Selector{
@@ -1228,7 +1228,7 @@ package test
 // 		{
 // 			name:          "No Updates",
 // 			setupMocks:    nil,
-// 			updateFields:  []types.UpdateField{},
+// 			updates:  []types.Update{},
 // 			selectors:     []types.Selector{{Field: "id", Value: 1}},
 // 			expectedRows:  0,
 // 			expectedError: "",
@@ -1246,7 +1246,7 @@ package test
 // 				mockStmt.On("Close").Return(nil)
 // 				mockErrorChecker.On("Check", mock.Anything).Return(errors.New("exec error"))
 // 			},
-// 			updateFields: []types.UpdateField{
+// 			updates: []types.Update{
 // 				{Field: "name", Value: "Alice"},
 // 			},
 // 			selectors: []types.Selector{
@@ -1273,7 +1273,7 @@ package test
 // 				mockDB,
 // 				"user_table",
 // 				tt.selectors,
-// 				tt.updateFields,
+// 				tt.updates,
 // 				mockErrorChecker,
 // 			)
 

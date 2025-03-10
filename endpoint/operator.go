@@ -206,26 +206,17 @@ type Orders map[string]OrderDirection
 func (o Orders) TranslateToDBOrders(
 	apiToDBFieldMap map[string]DBField,
 ) ([]database.Order, error) {
-	newOrders, err := o.Dedup()
+	dbOrders, err := o.dedup().ToDBOrders(apiToDBFieldMap)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("TranslateToDBOrders: %w", err)
 	}
-
-	dbOrders, err := newOrders.ToDBOrders(apiToDBFieldMap)
-	if err != nil {
-		return nil, err
-	}
-
 	return dbOrders, nil
 }
 
-// Dedup deduplicates the provided orders.
-// It returns a new list of orders with no duplicates.
-// It also returns an error if any of the orders are invalid.
-func (o Orders) Dedup() (Orders, error) {
+// dedup deduplicates the provided orders.
+func (o Orders) dedup() Orders {
 	dedup := map[string]OrderDirection{}
 	existing := make(map[string]bool)
-
 	for field := range o {
 		order := o[field]
 		if !existing[field] {
@@ -233,8 +224,7 @@ func (o Orders) Dedup() (Orders, error) {
 			existing[field] = true
 		}
 	}
-
-	return dedup, nil
+	return dedup
 }
 
 // ToDBOrders translates the provided orders into database orders.
@@ -334,7 +324,7 @@ func NewSelector(predicate Predicate, value any) *Selector {
 // It is useful for debugging and logging purposes.
 //
 // Returns:
-// - A formatted string showing the field, predicate, and value.
+//   - A formatted string showing the field, predicate, and value.
 func (s Selector) String() string {
 	return fmt.Sprintf("%s %v", s.Predicate, s.Value)
 }
@@ -435,16 +425,16 @@ type Updates map[string]any
 // and returns an error if the translation fails.
 //
 // Parameters:
-// - updates: The list of updates to translate.
-// - apiToDBFieldMap: The mapping of API field names to database field names.
+//   - updates: The list of updates to translate.
+//   - apiToDBFieldMap: The mapping of API field names to database field names.
 //
 // Returns:
-// - A list of database entity updates.
-// - An error if any field translation fails.
+//   - A list of database entity updates.
+//   - An error if any field translation fails.
 func (updates Updates) ToDBUpdates(
 	apiToDBFieldMap map[string]DBField,
-) ([]database.UpdateField, error) {
-	var dbUpdates []database.UpdateField
+) ([]database.Update, error) {
+	var dbUpdates []database.Update
 
 	for field := range updates {
 		value := updates[field]
@@ -461,7 +451,7 @@ func (updates Updates) ToDBUpdates(
 				))
 		}
 
-		dbUpdates = append(dbUpdates, database.UpdateField{
+		dbUpdates = append(dbUpdates, database.Update{
 			Field: dbField.Column,
 			Value: value,
 		})

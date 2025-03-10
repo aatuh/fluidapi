@@ -63,7 +63,7 @@ type QueryBuilder interface {
 	// Count builds a SELECT COUNT(*) statement with optional filters.
 	Count(table string, options *CountOptions) (query string, params []any)
 	// UpdateQuery builds an UPDATE statement for given selectors and update fields.
-	UpdateQuery(table string, updateFields []UpdateField, selectors []Selector) (query string, params []any)
+	UpdateQuery(table string, updates []Update, selectors []Selector) (query string, params []any)
 	// Delete builds a DELETE statement for given selectors.
 	Delete(table string, selectors []Selector, opts *DeleteOptions) (query string, params []any)
 	// CreateDatabaseQuery builds a CREATE DATABASE statement.

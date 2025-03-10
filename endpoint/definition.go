@@ -35,7 +35,20 @@ func NewDefinition(
 	}
 }
 
-// Option is a function that modifies a definition when it is cloned.
+// WithHandler sets the handler for the endpoint. And returns a new endpoint
+// definition.
+//
+// Parameters:
+//   - handler: The handler for the endpoint.
+//
+// Returns:
+//   - *Definition: A new endpoint definition.
+func (d *Definition) WithHandler(handler http.HandlerFunc) *Definition {
+	d.Handler = handler
+	return d
+}
+
+// Option is a function that modifies a definition.
 type Option func(*Definition)
 
 // Clone creates a deep copy of an endpoint definition with options.
@@ -147,12 +160,9 @@ func (d Definitions) ToEndpoints() []core.Endpoint {
 		}
 		endpoints = append(
 			endpoints,
-			core.NewEndpoint(
-				definition.URL,
-				definition.Method,
-				middlewares,
-				definition.Handler,
-			),
+			*core.NewEndpoint(
+				definition.URL, definition.Method, middlewares,
+			).WithHandler(definition.Handler),
 		)
 	}
 	return endpoints

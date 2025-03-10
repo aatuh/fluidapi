@@ -1,4 +1,4 @@
-package examples
+package main
 
 import (
 	"fmt"
@@ -43,7 +43,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func main() {
+func RunMiddleware() {
 	handler := core.NewHTTPServerHandler(nil, nil)
 
 	loggingWrapper := endpoint.NewWrapper(LoggingMiddleware, "logging", nil)

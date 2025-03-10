@@ -2,19 +2,19 @@ package core
 
 import (
 	"fmt"
-	"time"
 )
 
 // APIError represents a JSON marshalable custom error type with an ID and
 // other data.
 type APIError struct {
-	ID        string    `json:"id"`
-	Data      any       `json:"data,omitempty"`
-	Message   *string   `json:"message,omitempty"`
-	Timestamp time.Time `json:"timestamp"` // UTC timestamp.
+	ID      string  `json:"id"`
+	Data    any     `json:"data,omitempty"`
+	Message *string `json:"message,omitempty"`
+	Origin  string  `json:"origin,omitempty"` // Origin of the error.
 }
 
-// NewAPIError returns a new error with the given ID.
+// NewAPIError returns a new error with the given ID. The origin is set to "-"
+// to prevent empty origins and data leakage.
 //
 // Parameters:
 //   - id: The ID of the error.
@@ -23,8 +23,8 @@ type APIError struct {
 //   - *APIError: A new APIError.
 func NewAPIError(id string) *APIError {
 	return &APIError{
-		ID:        id,
-		Timestamp: time.Now().UTC(),
+		ID:     id,
+		Origin: "-", // Set to prevent empty origin.
 	}
 }
 
@@ -36,12 +36,9 @@ func NewAPIError(id string) *APIError {
 // Returns:
 //   - *APIError: A new APIError.
 func (e *APIError) WithData(data any) *APIError {
-	return &APIError{
-		ID:        e.ID,
-		Data:      data,
-		Message:   e.Message,
-		Timestamp: e.Timestamp,
-	}
+	newAPIError := *e
+	newAPIError.Data = data
+	return &newAPIError
 }
 
 // WithMessage returns a new error with the given message.
@@ -52,12 +49,22 @@ func (e *APIError) WithData(data any) *APIError {
 // Returns:
 //   - *APIError: A new APIError.
 func (e *APIError) WithMessage(message string) *APIError {
-	return &APIError{
-		ID:        e.ID,
-		Data:      e.Data,
-		Message:   &message,
-		Timestamp: e.Timestamp,
-	}
+	newAPIError := *e
+	newAPIError.Message = &message
+	return &newAPIError
+}
+
+// WithOrigin returns a new error with the given origin.
+//
+// Parameters:
+//   - origin: The origin to include in the error.
+//
+// Returns:
+//   - *APIError: A new APIError.
+func (e *APIError) WithOrigin(origin string) *APIError {
+	newAPIError := *e
+	newAPIError.Origin = origin
+	return &newAPIError
 }
 
 // Error returns the full error message as a string. If the error has a message,
